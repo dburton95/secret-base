@@ -26,6 +26,11 @@ return function(mod)
     connections = {},
     warps = {},
     signs = {},
-    objects = {},
+    objects = {
+      {
+        index = 1, x = 19, y = 2, sprite = "SPRITE_POKEDEX", movement = "STAY",
+	range = "DOWN", text = "CATALOGUE"
+      },
+    },
   })
 end
