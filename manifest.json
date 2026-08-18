@@ -1,0 +1,15 @@
+{
+  "id": "secret_base",
+  "name": "secret_base",
+  "version": "0.1.0",
+  "api": 2,
+  "entry": "main.lua",
+  "profile": "content",
+  "category": "GAMEPLAY",
+  "game_version": ">=0.0.0-dev <1.0.0",
+  "priority": 100,
+  "dependencies": [],
+  "optional_dependencies": [],
+  "conflicts": [],
+  "description": "Map changes authored in Tiled: 1 new map(s)."
+}
