@@ -9,11 +9,69 @@ return function(mod)
     {
       id = "BOULDER", label = "BOULDER", index = 2, x = 19, y = 4,
       sprite = "SPRITE_BOULDER", movement = "STAY", range = "DOWN",
+      cost = 100
     },
   }
 
-  -- Define secret base map
-  -- ---------------------
+  local restoreActiveFurniture
+  local inactiveFurnitureLabels, activeFurnitureLabels = {}, {}
+
+  -- Secret base catalogue script
+  -- ----------------------------
+  mod.content.map_scripts:register("SECRET_BASE", {
+    talk = {
+      ["CATALOGUE"] = {
+	{"show_text", "MYSTIC FURNITURE\nCATALOGUE:"},
+	{"choice", {"Add Furniture", "Move Furniture", "Remove Furniture", "Buy Furniture", "Cancel"}},
+	{"secretBase:catalogueChoice"},
+	{"jump", "end"},
+
+	{"label", "add"},
+	{"secretBase:refreshInactiveChoices"},
+	{"choice", inactiveFurnitureLabels},
+	{"secretBase:addFurniture"},
+	{"jump", "end"},
+
+	{"label", "move"},
+	{"secretBase:refreshActiveChoices"},
+	{"choice", activeFurnitureLabels},
+	{"secretBase:pickMoveItem"},
+	{"secretBase:pickMoveX"},
+	{"secretBase:pickMoveY"},
+	{"secretBase:moveFurniture"},
+	{"jump", "end"},
+
+	{"label", "remove"},
+	{"secretBase:refreshActiveChoices"},
+	{"choice", activeFurnitureLabels},
+	{"secretBase:removeFurniture"},
+	{"jump", "end"},
+
+	{"label", "purchase"},
+	{"secretBase:refreshUnsoldChoices"},
+	{"secretBase:shopFurnitureList"},
+	{"secretBase:purchaseFurniture"},
+	{"jump", "purchase"},
+
+	{"label", "cant_afford"},
+	{"show_text", "You don't have\nenough money."},
+	{"jump", "purchase"},
+      },
+      ["BOULDER"] = {
+	{"show_text", "This rock is proof\vof item interaction."},
+	{"fade", "out", "black"},
+	{"heal_party"},
+	{"play_once", "Music_PkmnHealed"},
+	{"fade", "in", "white"},
+	{"show_text", "Your POKEMON\nare fully healed!"},
+      },
+    },
+
+    onEnter = function(game, ow) restoreActiveFurniture() end,
+  })
+
+  -- Map loading
+  -- -----------
   for _, relative in ipairs(FILES) do
     local source = mod:read(relative)
     if not source then
@@ -39,16 +97,19 @@ return function(mod)
 
   mod.content.map_songs:override("SECRET_BASE", "Music_OaksLab")
 
+  -- Furniture system
+  -- ----------------
   local FURNITURE_BY_ID = {}
   for _, item in ipairs(FURNITURE) do FURNITURE_BY_ID[item.id] = item end
 
-  local function flagFor(item) return "MOD_SECRET_BASE_HAS_" .. item.id end
-  local function xFlagFor(item) return "MOD_SECRET_BASE_X_" .. item.id end
-  local function yFlagFor(item) return "MOD_SECRET_BASE_Y_" .. item.id end
+  local function activeFlagFor(item) return "MOD_SECRET_BASE_HAS_" .. item.id end
+  local function positionXFlagFor(item) return "MOD_SECRET_BASE_X_" .. item.id end
+  local function positionYFlagFor(item) return "MOD_SECRET_BASE_Y_" .. item.id end
+  local function purchasedFlagFor(item) return "MOD_SECRET_BASE_PURCHASED_" .. item.id end
 
   local function positionFor(item)
-    local x = mod.world:getFlag(xFlagFor(item))
-    local y = mod.world:getFlag(yFlagFor(item))
+    local x = mod.world:getFlag(positionXFlagFor(item))
+    local y = mod.world:getFlag(positionYFlagFor(item))
     if x == nil or y == nil then return item.x, item.y end
     return x, y
   end
@@ -61,8 +122,6 @@ return function(mod)
     }
   end
 
-  -- Track active furniture item IDs
-  -- ------------------------------
   local activeNpc = {}
 
   local function spawnFurniture(item)
@@ -72,45 +131,49 @@ return function(mod)
   local function despawnFurniture(item)
     local npcId = activeNpc[item.id]
     if npcId then mod.world:removeNpc(npcId) end
-    mod.world:setFlag(xFlagFor(item), nil)
-    mod.world:setFlag(yFlagFor(item), nil)
+    mod.world:setFlag(positionXFlagFor(item), nil)
+    mod.world:setFlag(positionYFlagFor(item), nil)
     activeNpc[item.id] = nil
   end
 
   local function relocateFurniture(item, x, y)
     local wasActive = activeNpc[item.id] ~= nil
     if wasActive then despawnFurniture(item) end
-    mod.world:setFlag(xFlagFor(item), x)
-    mod.world:setFlag(yFlagFor(item), y)
+    mod.world:setFlag(positionXFlagFor(item), x)
+    mod.world:setFlag(positionYFlagFor(item), y)
     if wasActive then spawnFurniture(item) end
   end
 
-  -- Relocation coordinates have too many options.
-  -- This defines a list similar to the shop or bag UI.
-  -- ----------------------------
-  local function pickFromList(ctx, title, labels)
+  restoreActiveFurniture = function()
+    for _, item in ipairs(FURNITURE) do
+      if mod.world:getFlag(activeFlagFor(item)) and not activeNpc[item.id] then
+        spawnFurniture(item)
+      end
+    end
+  end
+
+  -- Relocation System
+  -- ------------------
+  local function pickFromList(ctx, title, labels, opts)
     local items = {}
-    for _, label in ipairs(labels) do
-      items[#items + 1] = { label = label }
+    for _, entry in ipairs(labels) do
+      items[#items + 1] = type(entry) == "table" and entry or { label = entry }
     end
     local runner = ctx.runner
     local picked
-    local menu = mod.ui.ListMenu.new(ctx.game, title, items, {
-      wrap = true,
-      onChoose = function(item, self)
-        picked = item.label
-        self:close()
-        runner:resume()
-      end,
-      onCancel = function() runner:resume() end,
-    })
+    local menuOpts = { wrap = true }
+    for k, v in pairs(opts or {}) do menuOpts[k] = v end
+    menuOpts.onChoose = function(item, self)
+      picked = item.label
+      self:close()
+      runner:resume()
+    end
+    menuOpts.onCancel = function() runner:resume() end
+    local menu = mod.ui.ListMenu.new(ctx.game, title, items, menuOpts)
     ctx.game.stack:push(menu)
     runner:yield()
     return picked -- nil on cancel
   end
-
-  local inactiveFurnitureLabels = {}
-  local activeFurnitureLabels = {}
 
   local MOVE_X_LABELS = {}
   for x = 2, 19 do MOVE_X_LABELS[#MOVE_X_LABELS + 1] = tostring(x) end
@@ -118,47 +181,7 @@ return function(mod)
   local MOVE_Y_LABELS = {}
   for y = 2, 19 do MOVE_Y_LABELS[#MOVE_Y_LABELS + 1] = tostring(y) end
 
-  mod.content.map_scripts:register("SECRET_BASE", {
-    talk = {
-      ["CATALOGUE"] = {
-	{"show_text", "MYSTIC FURNITURE\nCATALOGUE:"},
-	{"choice", {"Add Furniture", "Move Furniture", "Remove Furniture", "Cancel"}},
-	{"secretBase:catalogueChoice"},
-	{"jump", "end"},
-
-	{"label", "add"},
-	{"secretBase:refreshInactiveChoices"},
-	{"choice", inactiveFurnitureLabels},
-	{"secretBase:addFurniture"},
-	{"jump", "end"},
-
-	{"label", "move"},
-	{"secretBase:refreshActiveChoices"},
-	{"choice", activeFurnitureLabels},
-	{"secretBase:pickMoveItem"},
-	{"secretBase:pickMoveX"},
-	{"secretBase:pickMoveY"},
-	{"secretBase:moveFurniture"},
-	{"jump", "end"},
-
-	{"label", "remove"},
-	{"secretBase:refreshActiveChoices"},
-	{"choice", activeFurnitureLabels},
-	{"secretBase:removeFurniture"},
-      },
-      ["BOULDER"] = {
-	{"show_text", "It's not a boulder.\vIt's a rock!"},
-      },
-    },
-
-    onEnter = function(game, ow)
-      for _, item in ipairs(FURNITURE) do
-        if mod.world:getFlag(flagFor(item)) and not activeNpc[item.id] then
-          spawnFurniture(item)
-        end
-      end
-    end,
-  })
+  local itemWithCost = {}
 
   mod.content.commands:register("secretBase:refreshActiveChoices", {
     fn = function(ctx)
@@ -166,7 +189,7 @@ return function(mod)
         activeFurnitureLabels[i] = nil
       end
       for _, item in ipairs(FURNITURE) do
-        if mod.world:getFlag(flagFor(item)) then
+        if mod.world:getFlag(activeFlagFor(item)) then
           activeFurnitureLabels[#activeFurnitureLabels + 1] = item.label
         end
       end
@@ -180,11 +203,28 @@ return function(mod)
         inactiveFurnitureLabels[i] = nil
       end
       for _, item in ipairs(FURNITURE) do
-        if not mod.world:getFlag(flagFor(item)) then
+        if mod.world:getFlag(purchasedFlagFor(item))
+            and not mod.world:getFlag(activeFlagFor(item)) then
           inactiveFurnitureLabels[#inactiveFurnitureLabels + 1] = item.label
         end
       end
       inactiveFurnitureLabels[#inactiveFurnitureLabels + 1] = "CANCEL"
+    end,
+  })
+
+  mod.content.commands:register("secretBase:refreshUnsoldChoices", {
+    fn = function(ctx)
+      for i = #itemWithCost, 1, -1 do
+        itemWithCost[i] = nil
+      end
+      for _, item in ipairs(FURNITURE) do
+        if not mod.world:getFlag(purchasedFlagFor(item)) then
+          itemWithCost[#itemWithCost + 1] = {
+            label = item.label,
+            right = ("¥%d"):format(item.cost),
+          }
+        end
+      end
     end,
   })
 
@@ -195,6 +235,7 @@ return function(mod)
       if choice == "Add Furniture" then return "add" end
       if choice == "Move Furniture" then return "move" end
       if choice == "Remove Furniture" then return "remove" end
+      if choice == "Buy Furniture" then return "purchase" end
       return "end" -- Cancel (or menu cancel)
     end,
   })
@@ -204,8 +245,9 @@ return function(mod)
     fn = function(ctx)
       local item = FURNITURE_BY_ID[ctx.lastChoice and ctx.lastChoice.label]
       if not item then return end -- CANCEL
-      if not mod.world:getFlag(flagFor(item)) then
-        mod.world:setFlag(flagFor(item), true)
+      if not mod.world:getFlag(purchasedFlagFor(item)) then return end -- not owned
+      if not mod.world:getFlag(activeFlagFor(item)) then
+        mod.world:setFlag(activeFlagFor(item), true)
         spawnFurniture(item)
       end
     end,
@@ -237,6 +279,19 @@ return function(mod)
     end,
   })
 
+  mod.content.commands:register("secretBase:shopFurnitureList", {
+    foreground = true,
+    fn = function(ctx)
+      local label = pickFromList(ctx, "FURNITURE SHOP", itemWithCost, {
+        dialogue = true,
+        footer = "Take your time.",
+        money = function() return ctx.save.money end,
+      })
+      if not label then return "end" end -- CANCEL
+      ctx.lastChoice = { label = label }
+    end,
+  })
+
   mod.content.commands:register("secretBase:moveFurniture", {
     foreground = true,
     fn = function(ctx)
@@ -249,20 +304,32 @@ return function(mod)
     fn = function(ctx)
       local item = FURNITURE_BY_ID[ctx.lastChoice and ctx.lastChoice.label]
       if not item then return end -- CANCEL
-      if mod.world:getFlag(flagFor(item)) then
-        mod.world:setFlag(flagFor(item), false)
+      if mod.world:getFlag(activeFlagFor(item)) then
+        mod.world:setFlag(activeFlagFor(item), false)
         despawnFurniture(item)
       end
     end,
   })
 
-  -- Shovel Item Code
-  -- -----------------
+  mod.content.commands:register("secretBase:purchaseFurniture", {
+    fn = function(ctx)
+      local item = FURNITURE_BY_ID[ctx.lastChoice and ctx.lastChoice.label]
+      if not item then return end -- CANCEL
+      if mod.world:getFlag(purchasedFlagFor(item)) then return end -- already owned
+
+      if ctx.save.money < item.cost then return "cant_afford" end
+
+      ctx.save.money = ctx.save.money - item.cost
+      mod.world:setFlag(purchasedFlagFor(item), true)
+    end,
+  })
+
+  -- Shovel item system
+  -- ------------------
   mod.content.items:register("MYS_SHOVEL", {
     id = "MYS_SHOVEL", name = "MYSTIC SHOVEL", price = 0,
     tossable = false, effect = "MYS_SHOVEL_EFFECT",
   })
-
 
   mod.hooks:wrap("item.use", function(next, game, battle, id, target, list,
       moveIndex, picker)
@@ -307,5 +374,35 @@ return function(mod)
       return "kept", {string.format("%s used the\n%s!",
         ctx.save.player.name, ctx.item.name)}
     end,
+  })
+
+  -- Give player shovel
+  -- --------------------
+  mod.content.maps:patch("MT_MOON_POKECENTER", {
+    objects = { __append = {
+      {
+        index = 1000, x = 5, y = 3,
+        sprite = "SPRITE_SCIENTIST",
+        movement = "STAY", range = "DOWN",
+        text = "TEXT_OAK_AIDE_SHOVEL", name = "OAK_AIDE_SHOVEL"
+      },
+    }},
+  })
+
+  mod.content.map_scripts:register("MT_MOON_POKECENTER", {
+    talk = {
+      TEXT_OAK_AIDE_SHOVEL = {
+	{"face_player"},
+	{"check_item", "MYS_SHOVEL"},
+	{"jump_if_true", "has_shovel"},
+
+	{"give_item", "MYS_SHOVEL", 1,
+	  "There you are!\vCheck out this\vweird shovel.\vYou can have it!"},
+	{"jump", "end"},
+
+	{"label", "has_shovel"},
+	{"show_text", "I have tons\nof these things.\012If you lose yours,\vcome talk\vto me again."},
+      },
+    },
   })
 end
