@@ -5,11 +5,80 @@ local FILES = {
 return function(mod)
   -- Define available furniture items
   -- -----------------------------------
+  
+  -- Set's the item's anchor point to the top left
+  -- --------------------------------------------
+  local TOPLEFT_ANCHOR_X, TOPLEFT_ANCHOR_Y = 8, 12
+
+  -- Set's the collision detection range for items based
+  -- how many tiles it's made of horizontally and vertically
+  -- ----------------------------------------------
+  local function footprintFor(tilesWide, tilesTall)
+    local offsets = {}
+    for dy = 0, tilesTall - 1 do
+      for dx = 0, tilesWide - 1 do
+        if dx ~= 0 or dy ~= 0 then
+          offsets[#offsets + 1] = { dx, dy }
+        end
+      end
+    end
+    return offsets
+  end
+
+  mod.content.sprites:register("SPRITE_BED", {
+    image = mod.assets:path("assets/bed.png"), frames = 1,
+    frameWidth = 32, frameHeight = 32, trueColor = true,
+    anchorX = TOPLEFT_ANCHOR_X, anchorY = TOPLEFT_ANCHOR_Y,
+  })
+
+  mod.content.sprites:register("SPRITE_TABLE_SQUARE", {
+    image = mod.assets:path("assets/square_table.png"), frames = 1,
+    frameWidth = 34, frameHeight = 35, trueColor = true,
+    anchorX = TOPLEFT_ANCHOR_X, anchorY = TOPLEFT_ANCHOR_Y,
+  })
+
+  mod.content.sprites:register("SPRITE_CHAIR_RIGHT", {
+    image = mod.assets:path("assets/chair_right.png"), frames = 1,
+    frameWidth = 18, frameHeight = 18, trueColor = true,
+    anchorX = TOPLEFT_ANCHOR_X, anchorY = TOPLEFT_ANCHOR_Y,
+  })
+
+  mod.content.sprites:register("SPRITE_CHAIR_LEFT", {
+    image = mod.assets:path("assets/chair_left.png"), frames = 1,
+    frameWidth = 18, frameHeight = 18, trueColor = true,
+    anchorX = TOPLEFT_ANCHOR_X, anchorY = TOPLEFT_ANCHOR_Y,
+  })
+
+  mod.content.sprites:register("SPRITE_INVISIBLE", {
+    image = mod.assets:path("assets/invisible.png"), frames = 1,
+  })
+
+  -- Anything bigger than one tile needs the footprint attribute
+  -- use footprintFor(NUMBER-OF-TILES-IN-X-DIRECTION, NUMBER-OF-TILES-IN-Y-DIRECTION)
+  -- to determine the footprint locations automatically.
+  -- -----------------------------------------------------
+
   local FURNITURE = {
     {
-      id = "BOULDER", label = "BOULDER", index = 2, x = 19, y = 4,
-      sprite = "SPRITE_BOULDER", movement = "STAY", range = "DOWN",
-      cost = 100
+      id = "BED", label = "Bed", index = 2, x = 10, y = 10,
+      sprite = "SPRITE_BED", movement = "STAY", range = "DOWN",
+      cost = 1000,
+      footprint = footprintFor(2, 2), -- 32x32 = 2x2 tiles
+    },
+    {
+      id = "TABLE_SQUARE", label = "Square Table", index = 3, x = 10, y =10,
+      sprite = "SPRITE_TABLE_SQUARE", movement = "STAY", range = "NONE",
+      cost = 500, footprint = footprintFor(2, 2),
+    },
+    {
+      id = "CHAIR_RIGHT", label = "Chair-Right", index = 4, x = 10, y = 10,
+      sprite = "SPRITE_CHAIR_RIGHT", movement = "STAY", range = "NONE",
+      cost = 250, footprint = footprintFor(1, 1),
+    },
+    {
+      id = "CHAIR_LEFT", label = "Chair-Left", index = 5, x = 10, y = 10,
+      sprite = "SPRITE_CHAIR_LEFT", movement = "STAY", range = "NONE",
+      cost = 250, footprint = footprintFor(1, 1),
     },
   }
 
@@ -57,13 +126,23 @@ return function(mod)
 	{"show_text", "You don't have\nenough money."},
 	{"jump", "purchase"},
       },
-      ["BOULDER"] = {
-	{"show_text", "This rock is proof\vof item interaction."},
+      ["Bed"] = {
+	{"ask", "Take a rest?"},
+	{"jump_if_false", "end"},
 	{"fade", "out", "black"},
 	{"heal_party"},
 	{"play_once", "Music_PkmnHealed"},
-	{"fade", "in", "white"},
+	{"fade", "in", "black"},
 	{"show_text", "Your POKEMON\nare fully healed!"},
+      },
+      ["Square Table"] = {
+        {"show_text", "It's a table."},
+      },
+      ["Chair-Right"] = {
+        {"show_text", "It's a chair."},
+      },
+      ["Chair-Left"] = {
+        {"show_text", "It's a chair."},
       },
     },
 
@@ -99,8 +178,8 @@ return function(mod)
 
   -- Furniture system
   -- ----------------
-  local FURNITURE_BY_ID = {}
-  for _, item in ipairs(FURNITURE) do FURNITURE_BY_ID[item.id] = item end
+  local FURNITURE_BY_LABEL = {}
+  for _, item in ipairs(FURNITURE) do FURNITURE_BY_LABEL[item.label] = item end
 
   local function activeFlagFor(item) return "MOD_SECRET_BASE_HAS_" .. item.id end
   local function positionXFlagFor(item) return "MOD_SECRET_BASE_X_" .. item.id end
@@ -124,13 +203,36 @@ return function(mod)
 
   local activeNpc = {}
 
+  local function footprintObjectsFor(item, x, y)
+    local objs = {}
+    for _, offset in ipairs(item.footprint or {}) do
+      objs[#objs + 1] = {
+        x = x + offset[1], y = y + offset[2],
+        sprite = "SPRITE_INVISIBLE", movement = "STAY", range = "DOWN",
+        text = item.label,
+      }
+    end
+    return objs
+  end
+
   local function spawnFurniture(item)
-    activeNpc[item.id] = mod.world:spawnNpc("SECRET_BASE", objectFor(item))
+    local x, y = positionFor(item)
+    local npcId = mod.world:spawnNpc("SECRET_BASE", objectFor(item))
+    local blockers = {}
+    for _, objDef in ipairs(footprintObjectsFor(item, x, y)) do
+      blockers[#blockers + 1] = mod.world:spawnNpc("SECRET_BASE", objDef)
+    end
+    activeNpc[item.id] = { npc = npcId, blockers = blockers }
   end
 
   local function despawnFurniture(item)
-    local npcId = activeNpc[item.id]
-    if npcId then mod.world:removeNpc(npcId) end
+    local entry = activeNpc[item.id]
+    if entry then
+      mod.world:removeNpc(entry.npc)
+      for _, blockerId in ipairs(entry.blockers) do
+        mod.world:removeNpc(blockerId)
+      end
+    end
     mod.world:setFlag(positionXFlagFor(item), nil)
     mod.world:setFlag(positionYFlagFor(item), nil)
     activeNpc[item.id] = nil
@@ -243,7 +345,7 @@ return function(mod)
   mod.content.commands:register("secretBase:addFurniture", {
     foreground = true,
     fn = function(ctx)
-      local item = FURNITURE_BY_ID[ctx.lastChoice and ctx.lastChoice.label]
+      local item = FURNITURE_BY_LABEL[ctx.lastChoice and ctx.lastChoice.label]
       if not item then return end -- CANCEL
       if not mod.world:getFlag(purchasedFlagFor(item)) then return end -- not owned
       if not mod.world:getFlag(activeFlagFor(item)) then
@@ -255,7 +357,7 @@ return function(mod)
 
   mod.content.commands:register("secretBase:pickMoveItem", {
     fn = function(ctx)
-      local item = FURNITURE_BY_ID[ctx.lastChoice and ctx.lastChoice.label]
+      local item = FURNITURE_BY_LABEL[ctx.lastChoice and ctx.lastChoice.label]
       if not item then return "end" end -- CANCEL
       ctx.moveItem = item
     end,
@@ -302,7 +404,7 @@ return function(mod)
 
   mod.content.commands:register("secretBase:removeFurniture", {
     fn = function(ctx)
-      local item = FURNITURE_BY_ID[ctx.lastChoice and ctx.lastChoice.label]
+      local item = FURNITURE_BY_LABEL[ctx.lastChoice and ctx.lastChoice.label]
       if not item then return end -- CANCEL
       if mod.world:getFlag(activeFlagFor(item)) then
         mod.world:setFlag(activeFlagFor(item), false)
@@ -313,7 +415,7 @@ return function(mod)
 
   mod.content.commands:register("secretBase:purchaseFurniture", {
     fn = function(ctx)
-      local item = FURNITURE_BY_ID[ctx.lastChoice and ctx.lastChoice.label]
+      local item = FURNITURE_BY_LABEL[ctx.lastChoice and ctx.lastChoice.label]
       if not item then return end -- CANCEL
       if mod.world:getFlag(purchasedFlagFor(item)) then return end -- already owned
 

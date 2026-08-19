@@ -1,15 +1,17 @@
 {
   "id": "secret_base",
   "name": "secret_base",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "api": 2,
   "entry": "main.lua",
   "profile": "content",
-  "category": "GAMEPLAY",
-  "game_version": ">=0.0.0-dev <1.0.0",
+  "category": "CONTENT",
+  "game_version": ">=0.1.86",
   "priority": 100,
   "dependencies": [],
   "optional_dependencies": [],
   "conflicts": [],
-  "description": "Map changes authored in Tiled: 1 new map(s)."
+  "description": "A secret base housing system for Gen 1.",
+  "github": "dburton95/secret-base",
+  "games": "gen1"
 }
