@@ -1,14 +1,19 @@
--- secret_base: map changes authored in Tiled and exported by
--- gen1-mod-export.  Each file below returns function(mod) and is
--- applied in order, so tilesets land before the maps that use them.
---
--- mod:read + load is how a mod loads its own extra files (the same
--- shape mods/examples/example_jukebox uses for song.lua).
 local FILES = {
   "maps/SECRET_BASE.lua",
 }
 
 return function(mod)
+  -- Define available furniture items
+  -- -----------------------------------
+  local FURNITURE = {
+    {
+      id = "BOULDER", label = "BOULDER", index = 2, x = 19, y = 4,
+      sprite = "SPRITE_BOULDER", movement = "STAY", range = "DOWN",
+    },
+  }
+
+  -- Define secret base map
+  -- ---------------------
   for _, relative in ipairs(FILES) do
     local source = mod:read(relative)
     if not source then
@@ -34,37 +39,112 @@ return function(mod)
 
   mod.content.map_songs:override("SECRET_BASE", "Music_OaksLab")
 
-  local FURNITURE = {
-    {
-      id = "BOULDER", label = "BOULDER", index = 2, x = 19, y = 4,
-      sprite = "SPRITE_BOULDER", movement = "STAY", range = "DOWN",
-    },
-  }
-
   local FURNITURE_BY_ID = {}
   for _, item in ipairs(FURNITURE) do FURNITURE_BY_ID[item.id] = item end
 
   local function flagFor(item) return "MOD_SECRET_BASE_HAS_" .. item.id end
+  local function xFlagFor(item) return "MOD_SECRET_BASE_X_" .. item.id end
+  local function yFlagFor(item) return "MOD_SECRET_BASE_Y_" .. item.id end
+
+  local function positionFor(item)
+    local x = mod.world:getFlag(xFlagFor(item))
+    local y = mod.world:getFlag(yFlagFor(item))
+    if x == nil or y == nil then return item.x, item.y end
+    return x, y
+  end
 
   local function objectFor(item)
+    local x, y = positionFor(item)
     return {
-      index = item.index, x = item.x, y = item.y, sprite = item.sprite,
+      index = item.index, x = x, y = y, sprite = item.sprite,
       movement = item.movement, range = item.range, text = item.label,
     }
   end
 
-  local choiceLabels = {}
-  for _, item in ipairs(FURNITURE) do
-    choiceLabels[#choiceLabels + 1] = item.label
+  -- Track active furniture item IDs
+  -- ------------------------------
+  local activeNpc = {}
+
+  local function spawnFurniture(item)
+    activeNpc[item.id] = mod.world:spawnNpc("SECRET_BASE", objectFor(item))
   end
-  choiceLabels[#choiceLabels + 1] = "CANCEL"
+
+  local function despawnFurniture(item)
+    local npcId = activeNpc[item.id]
+    if npcId then mod.world:removeNpc(npcId) end
+    mod.world:setFlag(xFlagFor(item), nil)
+    mod.world:setFlag(yFlagFor(item), nil)
+    activeNpc[item.id] = nil
+  end
+
+  local function relocateFurniture(item, x, y)
+    local wasActive = activeNpc[item.id] ~= nil
+    if wasActive then despawnFurniture(item) end
+    mod.world:setFlag(xFlagFor(item), x)
+    mod.world:setFlag(yFlagFor(item), y)
+    if wasActive then spawnFurniture(item) end
+  end
+
+  -- Relocation coordinates have too many options.
+  -- This defines a list similar to the shop or bag UI.
+  -- ----------------------------
+  local function pickFromList(ctx, title, labels)
+    local items = {}
+    for _, label in ipairs(labels) do
+      items[#items + 1] = { label = label }
+    end
+    local runner = ctx.runner
+    local picked
+    local menu = mod.ui.ListMenu.new(ctx.game, title, items, {
+      wrap = true,
+      onChoose = function(item, self)
+        picked = item.label
+        self:close()
+        runner:resume()
+      end,
+      onCancel = function() runner:resume() end,
+    })
+    ctx.game.stack:push(menu)
+    runner:yield()
+    return picked -- nil on cancel
+  end
+
+  local inactiveFurnitureLabels = {}
+  local activeFurnitureLabels = {}
+
+  local MOVE_X_LABELS = {}
+  for x = 2, 19 do MOVE_X_LABELS[#MOVE_X_LABELS + 1] = tostring(x) end
+
+  local MOVE_Y_LABELS = {}
+  for y = 2, 19 do MOVE_Y_LABELS[#MOVE_Y_LABELS + 1] = tostring(y) end
 
   mod.content.map_scripts:register("SECRET_BASE", {
     talk = {
       ["CATALOGUE"] = {
-	{"show_text", "Place furnishings?"},
-        {"choice", choiceLabels},
-	{"secretBase:furnish"},
+	{"show_text", "MYSTIC FURNITURE\nCATALOGUE:"},
+	{"choice", {"Add Furniture", "Move Furniture", "Remove Furniture", "Cancel"}},
+	{"secretBase:catalogueChoice"},
+	{"jump", "end"},
+
+	{"label", "add"},
+	{"secretBase:refreshInactiveChoices"},
+	{"choice", inactiveFurnitureLabels},
+	{"secretBase:addFurniture"},
+	{"jump", "end"},
+
+	{"label", "move"},
+	{"secretBase:refreshActiveChoices"},
+	{"choice", activeFurnitureLabels},
+	{"secretBase:pickMoveItem"},
+	{"secretBase:pickMoveX"},
+	{"secretBase:pickMoveY"},
+	{"secretBase:moveFurniture"},
+	{"jump", "end"},
+
+	{"label", "remove"},
+	{"secretBase:refreshActiveChoices"},
+	{"choice", activeFurnitureLabels},
+	{"secretBase:removeFurniture"},
       },
       ["BOULDER"] = {
 	{"show_text", "It's not a boulder.\vIt's a rock!"},
@@ -73,21 +153,105 @@ return function(mod)
 
     onEnter = function(game, ow)
       for _, item in ipairs(FURNITURE) do
-        if mod.world:getFlag(flagFor(item)) then
-          mod.world:spawnNpc("SECRET_BASE", objectFor(item))
+        if mod.world:getFlag(flagFor(item)) and not activeNpc[item.id] then
+          spawnFurniture(item)
         end
       end
     end,
   })
 
-  mod.content.commands:register("secretBase:furnish", {
+  mod.content.commands:register("secretBase:refreshActiveChoices", {
+    fn = function(ctx)
+      for i = #activeFurnitureLabels, 1, -1 do
+        activeFurnitureLabels[i] = nil
+      end
+      for _, item in ipairs(FURNITURE) do
+        if mod.world:getFlag(flagFor(item)) then
+          activeFurnitureLabels[#activeFurnitureLabels + 1] = item.label
+        end
+      end
+      activeFurnitureLabels[#activeFurnitureLabels + 1] = "CANCEL"
+    end,
+  })
+
+  mod.content.commands:register("secretBase:refreshInactiveChoices", {
+    fn = function(ctx)
+      for i = #inactiveFurnitureLabels, 1, -1 do
+        inactiveFurnitureLabels[i] = nil
+      end
+      for _, item in ipairs(FURNITURE) do
+        if not mod.world:getFlag(flagFor(item)) then
+          inactiveFurnitureLabels[#inactiveFurnitureLabels + 1] = item.label
+        end
+      end
+      inactiveFurnitureLabels[#inactiveFurnitureLabels + 1] = "CANCEL"
+    end,
+  })
+
+  mod.content.commands:register("secretBase:catalogueChoice", {
+    foreground = true,
+    fn = function(ctx)
+      local choice = ctx.lastChoice and ctx.lastChoice.label
+      if choice == "Add Furniture" then return "add" end
+      if choice == "Move Furniture" then return "move" end
+      if choice == "Remove Furniture" then return "remove" end
+      return "end" -- Cancel (or menu cancel)
+    end,
+  })
+
+  mod.content.commands:register("secretBase:addFurniture", {
     foreground = true,
     fn = function(ctx)
       local item = FURNITURE_BY_ID[ctx.lastChoice and ctx.lastChoice.label]
       if not item then return end -- CANCEL
       if not mod.world:getFlag(flagFor(item)) then
         mod.world:setFlag(flagFor(item), true)
-        mod.world:spawnNpc("SECRET_BASE", objectFor(item))
+        spawnFurniture(item)
+      end
+    end,
+  })
+
+  mod.content.commands:register("secretBase:pickMoveItem", {
+    fn = function(ctx)
+      local item = FURNITURE_BY_ID[ctx.lastChoice and ctx.lastChoice.label]
+      if not item then return "end" end -- CANCEL
+      ctx.moveItem = item
+    end,
+  })
+
+  mod.content.commands:register("secretBase:pickMoveX", {
+    foreground = true,
+    fn = function(ctx)
+      local x = tonumber(pickFromList(ctx, "CHOOSE X POSITION", MOVE_X_LABELS))
+      if not x then return "end" end -- CANCEL
+      ctx.moveX = x
+    end,
+  })
+
+  mod.content.commands:register("secretBase:pickMoveY", {
+    foreground = true,
+    fn = function(ctx)
+      local y = tonumber(pickFromList(ctx, "CHOOSE Y POSITION", MOVE_Y_LABELS))
+      if not y then return "end" end -- CANCEL
+      ctx.moveY = y
+    end,
+  })
+
+  mod.content.commands:register("secretBase:moveFurniture", {
+    foreground = true,
+    fn = function(ctx)
+      if not ctx.moveItem or not ctx.moveX or not ctx.moveY then return end
+      relocateFurniture(ctx.moveItem, ctx.moveX, ctx.moveY)
+    end,
+  })
+
+  mod.content.commands:register("secretBase:removeFurniture", {
+    fn = function(ctx)
+      local item = FURNITURE_BY_ID[ctx.lastChoice and ctx.lastChoice.label]
+      if not item then return end -- CANCEL
+      if mod.world:getFlag(flagFor(item)) then
+        mod.world:setFlag(flagFor(item), false)
+        despawnFurniture(item)
       end
     end,
   })
