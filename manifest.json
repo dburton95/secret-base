@@ -1,6 +1,6 @@
 {
   "id": "secret_base",
-  "name": "secret_base",
+  "name": "Secret Base",
   "version": "1.0.0",
   "api": 2,
   "entry": "main.lua",
@@ -13,5 +13,5 @@
   "conflicts": [],
   "description": "A secret base housing system for Gen 1.",
   "github": "dburton95/secret-base",
-  "games": "gen1"
+  "games": ["gen1"]
 }

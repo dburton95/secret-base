@@ -3,6 +3,10 @@ local FILES = {
 }
 
 return function(mod)
+  local modOptions = require("mods.secret-base.modOptions")
+  modOptions.init(mod)
+
+
   -- Define available furniture items
   -- -----------------------------------
   
@@ -39,14 +43,17 @@ return function(mod)
 
   mod.content.sprites:register("SPRITE_CHAIR_RIGHT", {
     image = mod.assets:path("assets/chair_right.png"), frames = 1,
-    frameWidth = 18, frameHeight = 18, trueColor = true,
-    anchorX = TOPLEFT_ANCHOR_X, anchorY = TOPLEFT_ANCHOR_Y,
+    trueColor = true,
   })
 
   mod.content.sprites:register("SPRITE_CHAIR_LEFT", {
     image = mod.assets:path("assets/chair_left.png"), frames = 1,
-    frameWidth = 18, frameHeight = 18, trueColor = true,
-    anchorX = TOPLEFT_ANCHOR_X, anchorY = TOPLEFT_ANCHOR_Y,
+    trueColor = true,
+  })
+
+  mod.content.sprites:register("SPRITE_MIKU", {
+    image = mod.assets:path("assets/miku.png"), frames = 6,
+    walker = true, trueColor = true,
   })
 
   mod.content.sprites:register("SPRITE_INVISIBLE", {
@@ -79,6 +86,11 @@ return function(mod)
       id = "CHAIR_LEFT", label = "Chair-Left", index = 5, x = 10, y = 10,
       sprite = "SPRITE_CHAIR_LEFT", movement = "STAY", range = "NONE",
       cost = 250, footprint = footprintFor(1, 1),
+    },
+    {
+      id = "MIKU", label = "Miku", index = 6, x = 10, y = 10,
+      sprite = "SPRITE_MIKU", movement = "WALK", range = 2,
+      cost = 25000, footprint = footprintFor(1, 1),
     },
   }
 
@@ -143,6 +155,9 @@ return function(mod)
       },
       ["Chair-Left"] = {
         {"show_text", "It's a chair."},
+      },
+      ["Miku"] = {
+        {"show_text", "Have you heard\nof Farfetch'd?\012It's my favorite\vPokemon!"},
       },
     },
 
