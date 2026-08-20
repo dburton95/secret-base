@@ -56,6 +56,11 @@ return function(mod)
     walker = true, trueColor = true,
   })
 
+  mod.content.sprites:register("SPRITE_RECORD_PLAYER", {
+    image = mod.assets:path("assets/record_player.png"), frames = 1,
+    trueColor = true,
+  })
+
   mod.content.sprites:register("SPRITE_INVISIBLE", {
     image = mod.assets:path("assets/invisible.png"), frames = 1,
   })
@@ -103,6 +108,16 @@ return function(mod)
       id = "MIKU", label = "Miku", index = 6, x = 10, y = 10,
       sprite = "SPRITE_MIKU", movement = "WALK", range = 2,
       cost = 25000, footprint = footprintFor(1, 1),
+    },
+    {
+      id = "RECORD_PLAYER", label = "Music Player", index = 7, x = 10, y = 10,
+      sprite = "SPRITE_RECORD_PLAYER", movement = "STAY", range = "NONE",
+      cost = 15000, footprint = footprintFor(1, 1),
+    },
+    {
+      id = "GACHA_BALL", label = "Gacha Ball", index = 8, x = 10, y = 10,
+      sprite = "SPRITE_POKE_BALL", movement = "STAY", range = "NONE",
+      cost = 1000, footprint = footprintFor(1,1),
     },
   }
 
@@ -192,6 +207,22 @@ return function(mod)
 	{"label", "100"},
 	{"start_battle", "trainer", "OPP_MIKU", 4},
       },
+      ["Music Player"] = {
+        {"ask", "Change the music?"},
+	{"jump_if_false", "end"},
+	{"secretBase:musicList"},
+	{"secretBase:changeMusic"},
+	{"show_text", "The mood shifts..."},
+      },
+      ["Gacha Ball"] = {
+        {"ask", "Play the gacha?\nCosts 500"},
+	{"jump_if_false", "end"},
+	{"secretBase:rollGachaBall"},
+	{"jump", "end"},
+
+	{"label", "cant_afford"},
+	{"show_text", "You don't have\nenough money."},
+      },
     },
 
     onEnter = function(game, ow) restoreActiveFurniture() end,
@@ -221,8 +252,104 @@ return function(mod)
       end
     end
   end
+  
+  -- Gacha Ball
+  -- -------------
+  local GACHA_TIERS = {
+    {id = "COMMON", weight = 70, items = {
+      "POTION", 
+      "POKE_BALL", 
+      "ETHER", 
+      "ANTIDOTE", 
+      "AWAKENING", 
+      "BURN_HEAL", 
+      "ICE_HEAL",
+      "REPEL",
+      "PARLYZ_HEAL",
+      "X_ACCURACY",
+      "X_ATTACK",
+      "X_DEFEND",
+      "X_SPECIAL",
+      "X_SPEED",
+      "DIRE_HIT",
+      }
+    },
+    {id = "UNCOMMON", weight = 25, items = {
+      "CALCIUM",
+      "CARBOS",
+      "ELIXER",
+      "ESCAPE_ROPE",
+      "FRESH_WATER",
+      "FULL_HEAL",
+      "GREAT_BALL",
+      "HP_UP",
+      "IRON",
+      "LEMONADE",
+      "MAX_ETHER",
+      "PP_UP",
+      "PROTEIN",
+      "REVIVE",
+      "SODA_POP",
+      "SUPER_POTION",
+      "SUPER_REPEL",
+      }
+    },
+    {id = "RARE", weight = 10, items = {
+      "FIRE_STONE",
+      "FULL_RESTORE",
+      "HYPER_POTION",
+      "LEAF_STONE",
+      "MAX_POTION",
+      "MAX_REPEL",
+      "MAX_REVIVE",
+      "MOON_STONE",
+      "MAX_ELIXER",
+      "ULTRA_BALL",
+      "WATER_STONE",
+      }
+    },
+    {id = "SUPER_RARE", weight = 1, items = {
+      "DOME_FOSSIL",
+      "HELIX_FOSSIL",
+      "NUGGET",
+      "OLD_AMBER",
+      "RARE_CANDY",
+      }
+    },
+    {id = "MYTHIC", weight = 0.25, items = {
+      "MASTER_BALL",
+      }
+    },
+  }
 
+  local function rollGacha(tiers)
+    local total = 0
+    for _, tier in ipairs(tiers) do total = total + tier.weight end
+    local roll, running = math.random() * total, 0
+    for _, tier in ipairs(tiers) do
+      running = running + tier.weight
+      if roll < running then
+        local items = tier.items
+	return items[math.random(1, #items)], tier.id
+      end
+    end
+    local last = tiers[#tiers]
+    return last.items[math.random(1, #last.items)], last.id
+  end
+
+  -- Record player
+  -- -------------
   mod.content.map_songs:override("SECRET_BASE", "Music_OaksLab")
+
+  local RECORD_PLAYER_MUSIC_FLAG = "MOD_SECRET_BASE_MUSIC"
+
+  mod.hooks:wrap("music.select", function(next, chosen, ctx)
+    if ctx and ctx.reason == "map" and ctx.mapId == "SECRET_BASE" then
+      local picked = mod.world:getFlag(RECORD_PLAYER_MUSIC_FLAG)
+      if picked then return next(picked, ctx) end
+    end
+    return next(chosen, ctx)
+  end)
 
   -- Furniture system
   -- ----------------
@@ -323,6 +450,18 @@ return function(mod)
     ctx.game.stack:push(menu)
     runner:yield()
     return picked -- nil on cancel
+  end
+
+  local function musicChoicesFor(data)
+    local seen, labels = {}, {}
+    for _, song in pairs(data.audio.mapSongs) do
+      if song and not seen[song] then
+        seen[song] = true
+        labels[#labels + 1] = song
+      end
+    end
+    table.sort(labels)
+    return labels
   end
 
   local MOVE_X_LABELS = {}
@@ -453,6 +592,26 @@ return function(mod)
       ctx.lastChoice = { label = label }
     end,
   })
+  
+  mod.content.commands:register("secretBase:musicList", {
+    foreground = true,
+    fn = function(ctx)
+      local label = pickFromList(ctx, "CHANGE MUSIC", musicChoicesFor(ctx.game.data))
+      if not label then return "end" end
+      ctx.lastChoice = {label = label}
+    end,
+  })
+
+  mod.content.commands:register("secretBase:changeMusic", {
+    fn = function(ctx)
+      local song = ctx.lastChoice and ctx.lastChoice.label
+      if not song then return end
+      mod.world:setFlag(RECORD_PLAYER_MUSIC_FLAG, song)
+      pcall(function()
+        require("src.core.Music").playMap(ctx.game.data, "SECRET_BASE")
+      end)
+    end,
+  })
 
   mod.content.commands:register("secretBase:moveFurniture", {
     foreground = true,
@@ -483,6 +642,17 @@ return function(mod)
 
       ctx.save.money = ctx.save.money - item.cost
       mod.world:setFlag(purchasedFlagFor(item), true)
+    end,
+  })
+
+  mod.content.commands:register("secretBase:rollGachaBall", {
+    foreground = true,
+    fn = function(ctx)
+      if ctx.save.money < 500 then return "cant_afford" end
+      ctx.save.money = ctx.save.money - 500
+
+      local itemId = rollGacha(GACHA_TIERS)
+      require("src.script.Commands").give_item(ctx, itemId)
     end,
   })
 
