@@ -61,6 +61,12 @@ return function(mod)
     trueColor = true,
   })
 
+  mod.content.sprites:register("SPRITE_PC", {
+    image = mod.assets:path("assets/pc.png"), frames = 1,
+    frameWidth = 16, frameHeight = 24, trueColor = true,
+    anchorX = TOPLEFT_ANCHOR_X, anchorY = TOPLEFT_ANCHOR_Y,
+  })
+
   mod.content.sprites:register("SPRITE_INVISIBLE", {
     image = mod.assets:path("assets/invisible.png"), frames = 1,
   })
@@ -118,6 +124,11 @@ return function(mod)
       id = "GACHA_BALL", label = "Gacha Ball", index = 8, x = 10, y = 10,
       sprite = "SPRITE_POKE_BALL", movement = "STAY", range = "NONE",
       cost = 1000, footprint = footprintFor(1,1),
+    },
+    {
+      id = "PC", label = "PC", index = 9, x =10, y =10,
+      sprite = "SPRITE_PC", movement = "STAY", range = "NONE",
+      cost = 10000, footprint = footprintFor(1, 1),
     },
   }
 
@@ -223,6 +234,9 @@ return function(mod)
 	{"label", "cant_afford"},
 	{"show_text", "You don't have\nenough money."},
       },
+      ["PC"] = {
+        {"secretBase:openPC"},
+      }
     },
 
     onEnter = function(game, ow) restoreActiveFurniture() end,
@@ -472,6 +486,11 @@ return function(mod)
 
   local itemWithCost = {}
 
+  mod.content.commands:register("secretBase:openPC", {
+    foreground = true,
+    fn = function(ctx) ctx.overworld:openPC() end,
+  })
+
   mod.content.commands:register("secretBase:refreshActiveChoices", {
     fn = function(ctx)
       for i = #activeFurnitureLabels, 1, -1 do
@@ -699,7 +718,7 @@ return function(mod)
             {arrive = "teleport"})
         end
       else
-        mod.world:warpTo("SECRET_BASE", 10, 10, "down",
+        mod.world:warpTo("SECRET_BASE", 10, 1, "down",
           {arrive = "teleport"})
       end
 

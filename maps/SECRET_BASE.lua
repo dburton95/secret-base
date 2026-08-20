@@ -9,9 +9,9 @@ return function(mod)
     palette = "CAVE",
     width = 11,
     height = 11,
-    borderBlock = 0,
+    borderBlock = 25,
     blocks = {
-      22, 28, 29, 29, 29, 29, 29, 29, 29, 30, 20,
+      25, 29, 29, 29, 30, 85, 28, 29, 29, 29, 25,
       26,  1,  1,  1,  1,  1,  1,  1,  1,  1, 24,
       26,  1,  1,  1,  1,  1,  1,  1,  1,  1, 24,
       26,  1,  1,  1,  1,  1,  1,  1,  1,  1, 24,
@@ -21,15 +21,15 @@ return function(mod)
       26,  1,  1,  1,  1,  1,  1,  1,  1,  1, 24,
       26,  1,  1,  1,  1,  1,  1,  1,  1,  1, 24,
       26,  1,  1,  1,  1,  1,  1,  1,  1,  1, 24,
-      30, 20, 21, 21, 21, 21, 21, 21, 21, 22, 28,
+      25, 21, 21, 21, 21, 21, 21, 21, 21, 21, 25,
     },
     connections = {},
     warps = {},
     signs = {},
     objects = {
       {
-        index = 1, x = 19, y = 2, sprite = "SPRITE_POKEDEX", movement = "STAY",
-	range = "DOWN", text = "CATALOGUE"
+        index = 1, x = 11, y = 1, sprite = "SPRITE_POKEDEX", movement = "STAY",
+        range = "NONE", text = "CATALOGUE"
       },
     },
   })
