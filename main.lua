@@ -60,6 +60,18 @@ return function(mod)
     image = mod.assets:path("assets/invisible.png"), frames = 1,
   })
 
+  local MIKU_FRONT = mod.assets:path("assets/mikuFront.png")
+
+  mod.content.trainers:register("OPP_MIKU", {
+    id = "OPP_MIKU", name = "HATSUNE MIKU", baseMoney = 75, pic = MIKU_FRONT, trueColor = true,
+    parties = {
+      {{level = 10, species = "FARFETCHD"}, {level = 10, species = "FARFETCHD"}, {level = 10, species = "FARFETCHD"}, {level = 10, species = "FARFETCHD"}, {level = 10, species = "FARFETCHD"}, {level = 10, species = "FARFETCHD"}},
+      {{level = 25, species = "FARFETCHD"}, {level = 25, species = "FARFETCHD"}, {level = 25, species = "FARFETCHD"}, {level = 25, species = "FARFETCHD"}, {level = 25, species = "FARFETCHD"}, {level = 25, species = "FARFETCHD"}},
+      {{level = 50, species = "FARFETCHD"}, {level = 50, species = "FARFETCHD"}, {level = 50, species = "FARFETCHD"}, {level = 50, species = "FARFETCHD"}, {level = 50, species = "FARFETCHD"}, {level = 50, species = "FARFETCHD"}},
+      {{level = 100, species = "FARFETCHD"}, {level = 100, species = "FARFETCHD"}, {level = 100, species = "FARFETCHD"}, {level = 100, species = "FARFETCHD"}, {level = 100, species = "FARFETCHD"}, {level = 100, species = "FARFETCHD"}},      
+    },
+  })
+
   -- Anything bigger than one tile needs the footprint attribute
   -- use footprintFor(NUMBER-OF-TILES-IN-X-DIRECTION, NUMBER-OF-TILES-IN-Y-DIRECTION)
   -- to determine the footprint locations automatically.
@@ -157,7 +169,28 @@ return function(mod)
         {"show_text", "It's a chair."},
       },
       ["Miku"] = {
-        {"show_text", "Have you heard\nof Farfetch'd?\012It's my favorite\vPokemon!"},
+        {"show_text", "Have you heard\nof Farfetch'd?\012It's my favorite\nPokemon!"},
+	{"ask", "How about a battle?"},
+	{"jump_if_false", "end"},
+	{"show_text", "What's your power level?"},
+	{"choice", {"Level 10", "Level 25", "Level 50", "Level 100"}},
+	{"secretBase:mikuChoice"},
+	{"jump", "end"},
+
+	{"label", "10"},
+        {"start_battle", "trainer", "OPP_MIKU", 1},
+	{"jump", "end"},
+
+	{"label", "25"},
+	{"start_battle", "trainer", "OPP_MIKU", 2},
+	{"jump", "end"},
+
+	{"label", "50"},
+	{"start_battle", "trainer", "OPP_MIKU", 3},
+	{"jump", "end"},
+
+	{"label", "100"},
+	{"start_battle", "trainer", "OPP_MIKU", 4},
       },
     },
 
@@ -354,6 +387,18 @@ return function(mod)
       if choice == "Remove Furniture" then return "remove" end
       if choice == "Buy Furniture" then return "purchase" end
       return "end" -- Cancel (or menu cancel)
+    end,
+  })
+
+  mod.content.commands:register("secretBase:mikuChoice", {
+    foreground = true,
+    fn = function(ctx)
+      local choice = ctx.lastChoice and ctx.lastChoice.label
+      if choice == "Level 10" then return "10" end
+      if choice == "Level 25" then return "25" end
+      if choice == "Level 50" then return "50" end
+      if choice == "Level 100" then return "100" end
+      return "end"
     end,
   })
 
