@@ -3,7 +3,7 @@ local modOptions = {}
 local CREDITS = {
   {key = "credit_creator", label = "MOD CREATOR", name = "Dgray66"},
   {key = "credit_miku", label = "MIKU SPRITE", name = "MoonLightLass"},
-  {key = "credit_sprite_1", label "SPRITE ARTIST", name = "7dollar24cent"},
+  {key = "credit_sprite_1", label = "SPRITE ARTIST", name = "7dollar24cent"},
 }
 
 function modOptions.init(mod)
