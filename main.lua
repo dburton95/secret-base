@@ -77,6 +77,11 @@ return function(mod)
     anchorY = 32,
   })
 
+  mod.content.sprites:register("SPRITE_TV", {
+    image = mod.assets:path("assets/tv.png"), frames = 1,
+    frameWidth = 23, frameHeight = 24, trueColor = true,
+  })
+
   ---------------------------------------------------------------
   mod.content.sprites:register("SPRITE_INVISIBLE", {
     image = mod.assets:path("assets/invisible.png"), frames = 1,
@@ -150,6 +155,11 @@ return function(mod)
       id = "LAMP", label = "Lamp", index = 11, x = 10, y = 10,
       sprite = "SPRITE_LAMP_OFF", movement = "STAY", range = "NONE",
       cost = 250, footprint = footprintFor(1, 1),
+    },
+    {
+      id = "TV", label = "TV", index = 12, x = 10, y = 10,
+      sprite = "SPRITE_TV", movement = "STAY", range = "NONE",
+      cost = 2000, footprint = footprintFor(1, 1),
     },
   }
 
