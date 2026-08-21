@@ -65,6 +65,19 @@ return function(mod)
     anchorX = TOPLEFT_ANCHOR_X, anchorY = TOPLEFT_ANCHOR_Y,
   })
 
+  mod.content.sprites:register("SPRITE_LAMP_OFF", {
+    image = mod.assets:path("assets/lamp_off.png"), frames = 1,
+    frameWidth = 15, frameHeight = 32, trueColor = true,
+    anchorX = TOPLEFT_ANCHOR_X, anchorY = 32,
+  })
+
+  mod.content.sprites:register("SPRITE_LAMP_ON", {
+    image = mod.assets:path("assets/lamp_on.png"), frames = 1,
+    frameWidth = 33, frameHeight = 32, trueColor = true,
+    anchorY = 32,
+  })
+
+  ---------------------------------------------------------------
   mod.content.sprites:register("SPRITE_INVISIBLE", {
     image = mod.assets:path("assets/invisible.png"), frames = 1,
   })
@@ -74,10 +87,10 @@ return function(mod)
   mod.content.trainers:register("OPP_MIKU", {
     id = "OPP_MIKU", name = "HATSUNE MIKU", baseMoney = 75, pic = MIKU_FRONT, trueColor = true,
     parties = {
-      {{level = 10, species = "FARFETCHD"}, {level = 10, species = "FARFETCHD"}, {level = 10, species = "FARFETCHD"}, {level = 10, species = "FARFETCHD"}, {level = 10, species = "FARFETCHD"}, {level = 10, species = "FARFETCHD"}},
-      {{level = 25, species = "FARFETCHD"}, {level = 25, species = "FARFETCHD"}, {level = 25, species = "FARFETCHD"}, {level = 25, species = "FARFETCHD"}, {level = 25, species = "FARFETCHD"}, {level = 25, species = "FARFETCHD"}},
-      {{level = 50, species = "FARFETCHD"}, {level = 50, species = "FARFETCHD"}, {level = 50, species = "FARFETCHD"}, {level = 50, species = "FARFETCHD"}, {level = 50, species = "FARFETCHD"}, {level = 50, species = "FARFETCHD"}},
-      {{level = 100, species = "FARFETCHD"}, {level = 100, species = "FARFETCHD"}, {level = 100, species = "FARFETCHD"}, {level = 100, species = "FARFETCHD"}, {level = 100, species = "FARFETCHD"}, {level = 100, species = "FARFETCHD"}},      
+      {{level = 10, species = "PIKACHU"}, {level = 10, species = "PIDGEY"}, {level = 10, species = "CHARMANDER"}, {level = 10, species = "LAPRAS"}, {level = 10, species = "JIGGLYPUFF"}, {level = 10, species = "FARFETCHD"}},
+      {{level = 25, species = "PIKACHU"}, {level = 25, species = "PIDGEOTTO"}, {level = 25, species = "CHARMELEON"}, {level = 25, species = "LAPRAS"}, {level = 25, species = "JIGGLYPUFF"}, {level = 25, species = "FARFETCHD"}},
+      {{level = 50, species = "PIKACHU"}, {level = 50, species = "PIDGEOT"}, {level = 50, species = "CHARIZARD"}, {level = 50, species = "LAPRAS"}, {level = 50, species = "WIGGLYTUFF"}, {level = 50, species = "FARFETCHD"}},
+      {{level = 100, species = "RAICHU"}, {level = 100, species = "PIDGEOT"}, {level = 100, species = "CHARIZARD"}, {level = 100, species = "LAPRAS"}, {level = 100, species = "WIGGLYTUFF"}, {level = 100, species = "FARFETCHD"}},      
     },
   })
 
@@ -132,6 +145,11 @@ return function(mod)
       id = "CREDITS", label = "Credits", index = 10, x = 19, y = 2,
       sprite = "SPRITE_CLIPBOARD", movement = "STAY", range = "NONE",
       free = true, default = true, footprint = footprintFor(1, 1),
+    },
+    {
+      id = "LAMP", label = "Lamp", index = 11, x = 10, y = 10,
+      sprite = "SPRITE_LAMP_OFF", movement = "STAY", range = "NONE",
+      cost = 250, footprint = footprintFor(1, 1),
     },
   }
 
@@ -242,6 +260,11 @@ return function(mod)
       },
       ["Credits"] = {
         {"secretBase:showCredits"},
+      },
+      ["Lamp"] = {
+	{"ask", "Pull the cord?"},
+	{"jump_if_false", "end"},
+        {"secretBase:swapLampStatus"},
       },
     },
     
@@ -395,6 +418,15 @@ return function(mod)
     return item.free or mod.world:getFlag(purchasedFlagFor(item))
   end
 
+  local LAMP_ON_FLAG = "MOD_SECRET_BASE_LAMP_ON"
+
+  local function spriteFor(item)
+    if item.id == "LAMP" and mod.world:getFlag(LAMP_ON_FLAG) then
+      return "SPRITE_LAMP_ON"
+    end
+    return item.sprite
+  end
+
   local function isActive(item)
     local flag = mod.world:getFlag(activeFlagFor(item))
     if flag == nil then return item.default == true end
@@ -411,7 +443,7 @@ return function(mod)
   local function objectFor(item)
     local x, y = positionFor(item)
     return {
-      index = item.index, x = x, y = y, sprite = item.sprite,
+      index = item.index, x = x, y = y, sprite = spriteFor(item),
       movement = item.movement, range = item.range, text = item.label,
     }
   end
@@ -509,6 +541,18 @@ return function(mod)
 
   local MOVE_Y_LABELS = {}
   for y = 2, 19 do MOVE_Y_LABELS[#MOVE_Y_LABELS + 1] = tostring(y) end
+
+  mod.content.commands:register("secretBase:swapLampStatus", {
+    fn = function(ctx)
+      local lamp = FURNITURE_BY_LABEL["Lamp"]
+      local x, y = positionFor(lamp)
+      mod.world:setFlag(LAMP_ON_FLAG, not mod.world:getFlag(LAMP_ON_FLAG))
+      despawnFurniture(lamp)
+      mod.world:setFlag(positionXFlagFor(lamp), x)
+      mod.world:setFlag(positionYFlagFor(lamp), y)
+      spawnFurniture(lamp)
+    end,
+  })
 
   mod.content.commands:register("secretBase:openPC", {
     foreground = true,
