@@ -3,8 +3,6 @@ local FILES = {
 }
 
 return function(mod)
-  local modOptions = require("mods.secret-base.modOptions")
-  modOptions.init(mod)
 
 
   -- Define available furniture items
@@ -130,10 +128,14 @@ return function(mod)
       sprite = "SPRITE_PC", movement = "STAY", range = "NONE",
       cost = 10000, footprint = footprintFor(1, 1),
     },
+    {
+      id = "CREDITS", label = "Credits", index = 10, x = 19, y = 2,
+      sprite = "SPRITE_CLIPBOARD", movement = "STAY", range = "NONE",
+      free = true, default = true, footprint = footprintFor(1, 1),
+    },
   }
 
   local restoreActiveFurniture
-  local inactiveFurnitureLabels, activeFurnitureLabels = {}, {}
 
   -- Secret base catalogue script
   -- ----------------------------
@@ -146,14 +148,12 @@ return function(mod)
 	{"jump", "end"},
 
 	{"label", "add"},
-	{"secretBase:refreshInactiveChoices"},
-	{"choice", inactiveFurnitureLabels},
+	{"secretBase:inactiveFurnitureList", "ADD FURNITURE"},
 	{"secretBase:addFurniture"},
 	{"jump", "end"},
 
 	{"label", "move"},
-	{"secretBase:refreshActiveChoices"},
-	{"choice", activeFurnitureLabels},
+	{"secretBase:activeFurnitureList", "MOVE FURNITURE"},
 	{"secretBase:pickMoveItem"},
 	{"secretBase:pickMoveX"},
 	{"secretBase:pickMoveY"},
@@ -161,13 +161,11 @@ return function(mod)
 	{"jump", "end"},
 
 	{"label", "remove"},
-	{"secretBase:refreshActiveChoices"},
-	{"choice", activeFurnitureLabels},
+	{"secretBase:activeFurnitureList", "REMOVE FURNITURE"},
 	{"secretBase:removeFurniture"},
 	{"jump", "end"},
 
 	{"label", "purchase"},
-	{"secretBase:refreshUnsoldChoices"},
 	{"secretBase:shopFurnitureList"},
 	{"secretBase:purchaseFurniture"},
 	{"jump", "purchase"},
@@ -183,6 +181,7 @@ return function(mod)
 	{"heal_party"},
 	{"play_once", "Music_PkmnHealed"},
 	{"fade", "in", "black"},
+	{"secretBase:resumeMusic"},
 	{"show_text", "Your POKEMON\nare fully healed!"},
       },
       ["Square Table"] = {
@@ -205,18 +204,22 @@ return function(mod)
 
 	{"label", "10"},
         {"start_battle", "trainer", "OPP_MIKU", 1},
+	{"secretBase:resumeMusic"},
 	{"jump", "end"},
 
 	{"label", "25"},
 	{"start_battle", "trainer", "OPP_MIKU", 2},
+	{"secretBase:resumeMusic"},
 	{"jump", "end"},
 
 	{"label", "50"},
 	{"start_battle", "trainer", "OPP_MIKU", 3},
+	{"secretBase:resumeMusic"},
 	{"jump", "end"},
 
 	{"label", "100"},
 	{"start_battle", "trainer", "OPP_MIKU", 4},
+	{"secretBase:resumeMusic"},
       },
       ["Music Player"] = {
         {"ask", "Change the music?"},
@@ -236,11 +239,24 @@ return function(mod)
       },
       ["PC"] = {
         {"secretBase:openPC"},
-      }
+      },
+      ["Credits"] = {
+        {"secretBase:showCredits"},
+      },
     },
+    
 
     onEnter = function(game, ow) restoreActiveFurniture() end,
   })
+
+
+  -- Art Credits
+  -- -------------
+  local creditsList = {
+    {item = "Miku", artist = "MoonLightLass"},
+    {item = "Music Player", artist = "7dollar24cent"},
+  }
+
 
   -- Map loading
   -- -----------
@@ -375,6 +391,16 @@ return function(mod)
   local function positionYFlagFor(item) return "MOD_SECRET_BASE_Y_" .. item.id end
   local function purchasedFlagFor(item) return "MOD_SECRET_BASE_PURCHASED_" .. item.id end
 
+  local function isPurchased(item)
+    return item.free or mod.world:getFlag(purchasedFlagFor(item))
+  end
+
+  local function isActive(item)
+    local flag = mod.world:getFlag(activeFlagFor(item))
+    if flag == nil then return item.default == true end
+    return flag
+  end
+
   local function positionFor(item)
     local x = mod.world:getFlag(positionXFlagFor(item))
     local y = mod.world:getFlag(positionYFlagFor(item))
@@ -437,7 +463,7 @@ return function(mod)
 
   restoreActiveFurniture = function()
     for _, item in ipairs(FURNITURE) do
-      if mod.world:getFlag(activeFlagFor(item)) and not activeNpc[item.id] then
+      if isActive(item) and not activeNpc[item.id] then
         spawnFurniture(item)
       end
     end
@@ -484,55 +510,38 @@ return function(mod)
   local MOVE_Y_LABELS = {}
   for y = 2, 19 do MOVE_Y_LABELS[#MOVE_Y_LABELS + 1] = tostring(y) end
 
-  local itemWithCost = {}
-
   mod.content.commands:register("secretBase:openPC", {
     foreground = true,
     fn = function(ctx) ctx.overworld:openPC() end,
   })
 
-  mod.content.commands:register("secretBase:refreshActiveChoices", {
-    fn = function(ctx)
-      for i = #activeFurnitureLabels, 1, -1 do
-        activeFurnitureLabels[i] = nil
-      end
+  mod.content.commands:register("secretBase:inactiveFurnitureList", {
+    foreground = true,
+    fn = function(ctx, title)
+      local labels = {}
       for _, item in ipairs(FURNITURE) do
-        if mod.world:getFlag(activeFlagFor(item)) then
-          activeFurnitureLabels[#activeFurnitureLabels + 1] = item.label
+        if isPurchased(item) and not isActive(item) then
+          labels[#labels + 1] = item.label
         end
       end
-      activeFurnitureLabels[#activeFurnitureLabels + 1] = "CANCEL"
+      local label = pickFromList(ctx, title or "ADD FURNITURE", labels)
+      if not label then return "end" end -- CANCEL
+      ctx.lastChoice = { label = label }
     end,
   })
 
-  mod.content.commands:register("secretBase:refreshInactiveChoices", {
-    fn = function(ctx)
-      for i = #inactiveFurnitureLabels, 1, -1 do
-        inactiveFurnitureLabels[i] = nil
-      end
+  mod.content.commands:register("secretBase:activeFurnitureList", {
+    foreground = true,
+    fn = function(ctx, title)
+      local labels = {}
       for _, item in ipairs(FURNITURE) do
-        if mod.world:getFlag(purchasedFlagFor(item))
-            and not mod.world:getFlag(activeFlagFor(item)) then
-          inactiveFurnitureLabels[#inactiveFurnitureLabels + 1] = item.label
+        if isActive(item) then
+          labels[#labels + 1] = item.label
         end
       end
-      inactiveFurnitureLabels[#inactiveFurnitureLabels + 1] = "CANCEL"
-    end,
-  })
-
-  mod.content.commands:register("secretBase:refreshUnsoldChoices", {
-    fn = function(ctx)
-      for i = #itemWithCost, 1, -1 do
-        itemWithCost[i] = nil
-      end
-      for _, item in ipairs(FURNITURE) do
-        if not mod.world:getFlag(purchasedFlagFor(item)) then
-          itemWithCost[#itemWithCost + 1] = {
-            label = item.label,
-            right = ("¥%d"):format(item.cost),
-          }
-        end
-      end
+      local label = pickFromList(ctx, title or "SELECT FURNITURE", labels)
+      if not label then return "end" end -- CANCEL
+      ctx.lastChoice = { label = label }
     end,
   })
 
@@ -565,8 +574,8 @@ return function(mod)
     fn = function(ctx)
       local item = FURNITURE_BY_LABEL[ctx.lastChoice and ctx.lastChoice.label]
       if not item then return end -- CANCEL
-      if not mod.world:getFlag(purchasedFlagFor(item)) then return end -- not owned
-      if not mod.world:getFlag(activeFlagFor(item)) then
+      if not isPurchased(item) then return end -- not owned
+      if not isActive(item) then
         mod.world:setFlag(activeFlagFor(item), true)
         spawnFurniture(item)
       end
@@ -602,6 +611,15 @@ return function(mod)
   mod.content.commands:register("secretBase:shopFurnitureList", {
     foreground = true,
     fn = function(ctx)
+      local itemWithCost = {}
+      for _, item in ipairs(FURNITURE) do
+        if not isPurchased(item) then
+          itemWithCost[#itemWithCost + 1] = {
+            label = item.label,
+            right = ("¥%d"):format(item.cost),
+          }
+        end
+      end
       local label = pickFromList(ctx, "FURNITURE SHOP", itemWithCost, {
         dialogue = true,
         footer = "Take your time.",
@@ -621,11 +639,71 @@ return function(mod)
     end,
   })
 
+  mod.content.commands:register("secretBase:showCredits", {
+    foreground = true,
+    fn = function(ctx)
+      local Font = mod.ui.Font
+      local runner = ctx.runner
+      local LINE_HEIGHT = 16
+      local ENTRY_GAP = 8 
+      local ENTRY_HEIGHT = LINE_HEIGHT * 2 + ENTRY_GAP
+      local TOP, BOTTOM = 24, 136
+      local rows = math.max(1, math.floor((BOTTOM - TOP) / ENTRY_HEIGHT))
+      local scroll = 0 
+      local box = {
+        isOpaque = true,
+        draw = function()
+          love.graphics.setColor(1, 1, 1, 1)
+          love.graphics.rectangle("fill", 0, 0, 160, 144)
+          love.graphics.setColor(0, 0, 0, 1)
+          Font.draw("ART CREDITS", 8, 4)
+          local n = #creditsList
+          if n > 0 then
+            local y = TOP
+            for row = 0, rows - 1 do
+              local entry = creditsList[((scroll + row) % n) + 1]
+              Font.draw(entry.item, 16, y)
+              Font.draw(entry.artist, 160 - 8 - Font.width(entry.artist), y + LINE_HEIGHT)
+              y = y + ENTRY_HEIGHT
+            end
+          end
+          love.graphics.setColor(1, 1, 1, 1)
+        end,
+        update = function()
+          local input = ctx.game.input
+          local n = #creditsList
+          if n > 0 then
+            if input:wasPressed("down") then
+              scroll = (scroll + 1) % n
+            elseif input:wasPressed("up") then
+              scroll = (scroll - 1) % n
+            end
+          end
+          if input:wasPressed("a") or input:wasPressed("b") then
+            ctx.game.stack:pop()
+            runner:resume()
+          end
+        end,
+      }
+      ctx.game.stack:push(box)
+      runner:yield()
+    end
+  })
+
   mod.content.commands:register("secretBase:changeMusic", {
     fn = function(ctx)
       local song = ctx.lastChoice and ctx.lastChoice.label
       if not song then return end
       mod.world:setFlag(RECORD_PLAYER_MUSIC_FLAG, song)
+      pcall(function()
+        require("src.core.Music").playMap(ctx.game.data, "SECRET_BASE")
+      end)
+    end,
+  })
+
+  mod.content.commands:register("secretBase:resumeMusic", {
+    fn = function(ctx)
+      local song = mod.world:getFlag(RECORD_PLAYER_MUSIC_FLAG)
       pcall(function()
         require("src.core.Music").playMap(ctx.game.data, "SECRET_BASE")
       end)
@@ -644,7 +722,7 @@ return function(mod)
     fn = function(ctx)
       local item = FURNITURE_BY_LABEL[ctx.lastChoice and ctx.lastChoice.label]
       if not item then return end -- CANCEL
-      if mod.world:getFlag(activeFlagFor(item)) then
+      if isActive(item) then
         mod.world:setFlag(activeFlagFor(item), false)
         despawnFurniture(item)
       end
@@ -655,7 +733,7 @@ return function(mod)
     fn = function(ctx)
       local item = FURNITURE_BY_LABEL[ctx.lastChoice and ctx.lastChoice.label]
       if not item then return end -- CANCEL
-      if mod.world:getFlag(purchasedFlagFor(item)) then return end -- already owned
+      if isPurchased(item) then return end -- already owned, or free
 
       if ctx.save.money < item.cost then return "cant_afford" end
 
