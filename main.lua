@@ -770,6 +770,7 @@ return function(mod)
     local question = atBase and "Leave your\nSecret Base?"
       or "Go to your\nSecret Base?"
     game.stack:push(mod.ui.TextBox.new(game, question, nil, {
+      foreground = true,
       choice = function(yes)
         if not yes then return end
         list:close()
