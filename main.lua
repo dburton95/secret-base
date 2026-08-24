@@ -176,10 +176,10 @@ return function(mod)
   -- TV Lines
   -- --------
   local showList = {
-    "A strange blue Pokemon is looking for clues?",
-    "..........\n........\012I hope Mom doesn't see\vthis on the bill.",
-    "A man complains about\va 5 dollar shake.",
-    "She could fit Jack\von that door...",
+    "A strange blue\nPokemon is\vlooking for clues?",
+    "..........\n..........\012I hope Mom doesn't see this on the\vcable bill.",
+    "A man complains\nabout a 5 dollar\vshake.",
+    "She could fit Jack\non that door...",
   }
 
   -- Builds a talk script that picks a random line from showList and
