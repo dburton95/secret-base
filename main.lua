@@ -173,6 +173,30 @@ return function(mod)
 
   local restoreActiveFurniture
 
+  -- TV Lines
+  -- --------
+  local showList = {
+    "A strange blue Pokemon is looking for clues?",
+    "..........\n........\012I hope Mom doesn't see\vthis on the bill.",
+    "A man complains about\va 5 dollar shake.",
+    "She could fit Jack\von that door...",
+  }
+
+  -- Builds a talk script that picks a random line from showList and
+  -- shows it -- adding more entries to showList is picked up automatically.
+  local function buildTvTalk()
+    local talk = {
+      {"secretBase:pickShow"},
+      {"jump", "end"},
+    }
+    for i, line in ipairs(showList) do
+      talk[#talk + 1] = {"label", tostring(i)}
+      talk[#talk + 1] = {"show_text", line}
+      talk[#talk + 1] = {"jump", "end"}
+    end
+    return talk
+  end
+
   -- Secret base catalogue script
   -- ----------------------------
   mod.content.map_scripts:register("SECRET_BASE", {
@@ -284,24 +308,12 @@ return function(mod)
         {"jump_if_false", "end"},
         {"secretBase:swapLampStatus"},
       },
-      ["TV"] = {
-        {"secretBase:pickShow"},
-        {"show_text", showChoice},
-      },
+      ["TV"] = buildTvTalk(),
     },
     
 
     onEnter = function(game, ow) restoreActiveFurniture() end,
   })
-
-  local showList = {
-    {"A strange blue Pokemon is looking for clues?"},
-    {"..........\n........\012I hope Mom doesn't see\vthis on the bill."},
-    {"A man complains about\va 5 dollar shake."},
-    {"She could fit Jack\von that door..."},
-  }
-
-
 
 
   -- Art Credits
@@ -608,9 +620,8 @@ return function(mod)
 
   mod.content.commands:register("secretBase:pickShow", {
     fn = function(ctx)
-      local showChoice = showList.random
-      return showChoice
-    end,  
+      return tostring(math.random(#showList))
+    end,
   })
 
   mod.content.commands:register("secretBase:openPC", {
