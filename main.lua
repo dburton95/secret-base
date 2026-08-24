@@ -104,62 +104,70 @@ return function(mod)
   -- to determine the footprint locations automatically.
   -- -----------------------------------------------------
 
+  local FURNITURE_CATEGORIES = { "DECORATIONS", "FUNCTIONAL", "TRAINERS" }
+
   local FURNITURE = {
-    {
-      id = "BED", label = "Bed", index = 2, x = 10, y = 10,
-      sprite = "SPRITE_BED", movement = "STAY", range = "DOWN",
-      cost = 1000,
-      footprint = footprintFor(2, 2), -- 32x32 = 2x2 tiles
+    DECORATIONS = {
+      {
+        id = "CHAIR_LEFT", label = "Chair-Left", index = 5, x = 10, y = 10,
+        sprite = "SPRITE_CHAIR_LEFT", movement = "STAY", range = "NONE",
+        cost = 250, footprint = footprintFor(1, 1),
+      },
+      {
+        id = "CHAIR_RIGHT", label = "Chair-Right", index = 4, x = 10, y = 10,
+        sprite = "SPRITE_CHAIR_RIGHT", movement = "STAY", range = "NONE",
+        cost = 250, footprint = footprintFor(1, 1),
+      },
+      {
+        id = "LAMP", label = "Lamp", index = 11, x = 10, y = 10,
+        sprite = "SPRITE_LAMP_OFF", movement = "STAY", range = "NONE",
+        cost = 250, footprint = footprintFor(1, 1),
+      },
+      {
+        id = "TABLE_SQUARE", label = "Square Table", index = 3, x = 10, y =10,
+        sprite = "SPRITE_TABLE_SQUARE", movement = "STAY", range = "NONE",
+        cost = 500, footprint = footprintFor(2, 2),
+      },
+      {
+        id = "TV", label = "TV", index = 12, x = 10, y = 10,
+        sprite = "SPRITE_TV", movement = "STAY", range = "NONE",
+        cost = 2000, footprint = footprintFor(1, 1),
+      },
     },
-    {
-      id = "TABLE_SQUARE", label = "Square Table", index = 3, x = 10, y =10,
-      sprite = "SPRITE_TABLE_SQUARE", movement = "STAY", range = "NONE",
-      cost = 500, footprint = footprintFor(2, 2),
+    FUNCTIONAL = {
+      {
+        id = "BED", label = "Bed", index = 2, x = 10, y = 10,
+        sprite = "SPRITE_BED", movement = "STAY", range = "DOWN",
+        cost = 1000,
+        footprint = footprintFor(2, 2), -- 32x32 = 2x2 tiles
+      },
+      {
+        id = "CREDITS", label = "Credits", index = 10, x = 19, y = 2,
+        sprite = "SPRITE_CLIPBOARD", movement = "STAY", range = "NONE",
+        free = true, default = true, footprint = footprintFor(1, 1),
+      },
+      {
+        id = "GACHA_BALL", label = "Gacha Ball", index = 8, x = 10, y = 10,
+        sprite = "SPRITE_POKE_BALL", movement = "STAY", range = "NONE",
+        cost = 1000, footprint = footprintFor(1,1),
+      },
+      {
+        id = "PC", label = "PC", index = 9, x =10, y =10,
+        sprite = "SPRITE_PC", movement = "STAY", range = "NONE",
+        cost = 10000, footprint = footprintFor(1, 1),
+      },
+      {
+        id = "RECORD_PLAYER", label = "Music Player", index = 7, x = 10, y = 10,
+        sprite = "SPRITE_RECORD_PLAYER", movement = "STAY", range = "NONE",
+        cost = 15000, footprint = footprintFor(1, 1),
+      },
     },
-    {
-      id = "CHAIR_RIGHT", label = "Chair-Right", index = 4, x = 10, y = 10,
-      sprite = "SPRITE_CHAIR_RIGHT", movement = "STAY", range = "NONE",
-      cost = 250, footprint = footprintFor(1, 1),
-    },
-    {
-      id = "CHAIR_LEFT", label = "Chair-Left", index = 5, x = 10, y = 10,
-      sprite = "SPRITE_CHAIR_LEFT", movement = "STAY", range = "NONE",
-      cost = 250, footprint = footprintFor(1, 1),
-    },
-    {
-      id = "MIKU", label = "Miku", index = 6, x = 10, y = 10,
-      sprite = "SPRITE_MIKU", movement = "WALK", range = 2,
-      cost = 25000, footprint = footprintFor(1, 1),
-    },
-    {
-      id = "RECORD_PLAYER", label = "Music Player", index = 7, x = 10, y = 10,
-      sprite = "SPRITE_RECORD_PLAYER", movement = "STAY", range = "NONE",
-      cost = 15000, footprint = footprintFor(1, 1),
-    },
-    {
-      id = "GACHA_BALL", label = "Gacha Ball", index = 8, x = 10, y = 10,
-      sprite = "SPRITE_POKE_BALL", movement = "STAY", range = "NONE",
-      cost = 1000, footprint = footprintFor(1,1),
-    },
-    {
-      id = "PC", label = "PC", index = 9, x =10, y =10,
-      sprite = "SPRITE_PC", movement = "STAY", range = "NONE",
-      cost = 10000, footprint = footprintFor(1, 1),
-    },
-    {
-      id = "CREDITS", label = "Credits", index = 10, x = 19, y = 2,
-      sprite = "SPRITE_CLIPBOARD", movement = "STAY", range = "NONE",
-      free = true, default = true, footprint = footprintFor(1, 1),
-    },
-    {
-      id = "LAMP", label = "Lamp", index = 11, x = 10, y = 10,
-      sprite = "SPRITE_LAMP_OFF", movement = "STAY", range = "NONE",
-      cost = 250, footprint = footprintFor(1, 1),
-    },
-    {
-      id = "TV", label = "TV", index = 12, x = 10, y = 10,
-      sprite = "SPRITE_TV", movement = "STAY", range = "NONE",
-      cost = 2000, footprint = footprintFor(1, 1),
+    TRAINERS = {
+      {
+        id = "MIKU", label = "Miku", index = 6, x = 10, y = 10,
+        sprite = "SPRITE_MIKU", movement = "WALK", range = 2,
+        cost = 25000, footprint = footprintFor(1, 1),
+      },
     },
   }
 
@@ -170,47 +178,47 @@ return function(mod)
   mod.content.map_scripts:register("SECRET_BASE", {
     talk = {
       ["CATALOGUE"] = {
-	{"show_text", "MYSTIC FURNITURE\nCATALOGUE:"},
-	{"choice", {"Add Furniture", "Move Furniture", "Remove Furniture", "Buy Furniture", "Cancel"}},
-	{"secretBase:catalogueChoice"},
-	{"jump", "end"},
+  	    {"show_text", "MYSTIC FURNITURE\nCATALOGUE:"},
+	      {"choice", {"Add Furniture", "Move Furniture", "Remove Furniture", "Buy Furniture", "Cancel"}},
+      	{"secretBase:catalogueChoice"},
+      	{"jump", "end"},
 
-	{"label", "add"},
-	{"secretBase:inactiveFurnitureList", "ADD FURNITURE"},
-	{"secretBase:addFurniture"},
-	{"jump", "end"},
+      	{"label", "add"},
+      	{"secretBase:inactiveFurnitureList", "ADD FURNITURE"},
+      	{"secretBase:addFurniture"},
+      	{"jump", "end"},
 
-	{"label", "move"},
-	{"secretBase:activeFurnitureList", "MOVE FURNITURE"},
-	{"secretBase:pickMoveItem"},
-	{"secretBase:pickMoveX"},
-	{"secretBase:pickMoveY"},
-	{"secretBase:moveFurniture"},
-	{"jump", "end"},
+      	{"label", "move"},
+	      {"secretBase:activeFurnitureList", "MOVE FURNITURE"},
+	      {"secretBase:pickMoveItem"},
+        {"secretBase:pickMoveX"},
+        {"secretBase:pickMoveY"},
+        {"secretBase:moveFurniture"},
+        {"jump", "end"},
 
-	{"label", "remove"},
-	{"secretBase:activeFurnitureList", "REMOVE FURNITURE"},
-	{"secretBase:removeFurniture"},
-	{"jump", "end"},
+        {"label", "remove"},
+        {"secretBase:activeFurnitureList", "REMOVE FURNITURE"},
+        {"secretBase:removeFurniture"},
+        {"jump", "end"},
 
-	{"label", "purchase"},
-	{"secretBase:shopFurnitureList"},
-	{"secretBase:purchaseFurniture"},
-	{"jump", "purchase"},
+        {"label", "purchase"},
+        {"secretBase:shopFurnitureList"},
+        {"secretBase:purchaseFurniture"},
+        {"jump", "purchase"},
 
-	{"label", "cant_afford"},
-	{"show_text", "You don't have\nenough money."},
-	{"jump", "purchase"},
+        {"label", "cant_afford"},
+        {"show_text", "You don't have\nenough money."},
+        {"jump", "purchase"},
       },
       ["Bed"] = {
-	{"ask", "Take a rest?"},
-	{"jump_if_false", "end"},
-	{"fade", "out", "black"},
-	{"heal_party"},
-	{"play_once", "Music_PkmnHealed"},
-	{"fade", "in", "black"},
-	{"secretBase:resumeMusic"},
-	{"show_text", "Your POKEMON\nare fully healed!"},
+        {"ask", "Take a rest?"},
+        {"jump_if_false", "end"},
+        {"fade", "out", "black"},
+        {"heal_party"},
+        {"play_once", "Music_PkmnHealed"},
+        {"fade", "in", "black"},
+        {"secretBase:resumeMusic"},
+        {"show_text", "Your POKEMON\nare fully healed!"},
       },
       ["Square Table"] = {
         {"show_text", "It's a table."},
@@ -223,47 +231,47 @@ return function(mod)
       },
       ["Miku"] = {
         {"show_text", "Have you heard\nof Farfetch'd?\012It's my favorite\nPokemon!"},
-	{"ask", "How about a battle?"},
-	{"jump_if_false", "end"},
-	{"show_text", "What's your power level?"},
-	{"choice", {"Level 10", "Level 25", "Level 50", "Level 100"}},
-	{"secretBase:mikuChoice"},
-	{"jump", "end"},
+        {"ask", "How about a battle?"},
+        {"jump_if_false", "end"},
+        {"show_text", "What's your power level?"},
+        {"choice", {"Level 10", "Level 25", "Level 50", "Level 100"}},
+        {"secretBase:mikuChoice"},
+        {"jump", "end"},
 
-	{"label", "10"},
+        {"label", "10"},
         {"start_battle", "trainer", "OPP_MIKU", 1},
-	{"secretBase:resumeMusic"},
-	{"jump", "end"},
+        {"secretBase:resumeMusic"},
+        {"jump", "end"},
 
-	{"label", "25"},
-	{"start_battle", "trainer", "OPP_MIKU", 2},
-	{"secretBase:resumeMusic"},
-	{"jump", "end"},
+        {"label", "25"},
+        {"start_battle", "trainer", "OPP_MIKU", 2},
+        {"secretBase:resumeMusic"},
+        {"jump", "end"},
 
-	{"label", "50"},
-	{"start_battle", "trainer", "OPP_MIKU", 3},
-	{"secretBase:resumeMusic"},
-	{"jump", "end"},
+        {"label", "50"},
+        {"start_battle", "trainer", "OPP_MIKU", 3},
+        {"secretBase:resumeMusic"},
+        {"jump", "end"},
 
-	{"label", "100"},
-	{"start_battle", "trainer", "OPP_MIKU", 4},
-	{"secretBase:resumeMusic"},
+        {"label", "100"},
+        {"start_battle", "trainer", "OPP_MIKU", 4},
+        {"secretBase:resumeMusic"},
       },
       ["Music Player"] = {
         {"ask", "Change the music?"},
-	{"jump_if_false", "end"},
-	{"secretBase:musicList"},
-	{"secretBase:changeMusic"},
-	{"show_text", "The mood shifts..."},
+        {"jump_if_false", "end"},
+        {"secretBase:musicList"},
+        {"secretBase:changeMusic"},
+        {"show_text", "The mood shifts..."},
       },
       ["Gacha Ball"] = {
         {"ask", "Play the gacha?\nCosts 500"},
-	{"jump_if_false", "end"},
-	{"secretBase:rollGachaBall"},
-	{"jump", "end"},
+        {"jump_if_false", "end"},
+        {"secretBase:rollGachaBall"},
+        {"jump", "end"},
 
-	{"label", "cant_afford"},
-	{"show_text", "You don't have\nenough money."},
+        {"label", "cant_afford"},
+        {"show_text", "You don't have\nenough money."},
       },
       ["PC"] = {
         {"secretBase:openPC"},
@@ -272,15 +280,28 @@ return function(mod)
         {"secretBase:showCredits"},
       },
       ["Lamp"] = {
-	{"ask", "Pull the cord?"},
-	{"jump_if_false", "end"},
+        {"ask", "Pull the cord?"},
+        {"jump_if_false", "end"},
         {"secretBase:swapLampStatus"},
+      },
+      ["TV"] = {
+        {"secretBase:pickShow"},
+        {"show_text", showChoice},
       },
     },
     
 
     onEnter = function(game, ow) restoreActiveFurniture() end,
   })
+
+  local showList = {
+    {"A strange blue Pokemon is looking for clues?"},
+    {"..........\n........\012I hope Mom doesn't see\vthis on the bill."},
+    {"A man complains about\va 5 dollar shake."},
+    {"She could fit Jack\von that door..."},
+  }
+
+
 
 
   -- Art Credits
@@ -393,7 +414,7 @@ return function(mod)
       running = running + tier.weight
       if roll < running then
         local items = tier.items
-	return items[math.random(1, #items)], tier.id
+	  return items[math.random(1, #items)], tier.id
       end
     end
     local last = tiers[#tiers]
@@ -417,7 +438,11 @@ return function(mod)
   -- Furniture system
   -- ----------------
   local FURNITURE_BY_LABEL = {}
-  for _, item in ipairs(FURNITURE) do FURNITURE_BY_LABEL[item.label] = item end
+  for _, category in ipairs(FURNITURE_CATEGORIES) do
+    for _, item in ipairs(FURNITURE[category]) do
+      FURNITURE_BY_LABEL[item.label] = item
+    end
+  end
 
   local function activeFlagFor(item) return "MOD_SECRET_BASE_HAS_" .. item.id end
   local function positionXFlagFor(item) return "MOD_SECRET_BASE_X_" .. item.id end
@@ -504,9 +529,11 @@ return function(mod)
   end
 
   restoreActiveFurniture = function()
-    for _, item in ipairs(FURNITURE) do
-      if isActive(item) and not activeNpc[item.id] then
-        spawnFurniture(item)
+    for _, category in ipairs(FURNITURE_CATEGORIES) do
+      for _, item in ipairs(FURNITURE[category]) do
+        if isActive(item) and not activeNpc[item.id] then
+          spawnFurniture(item)
+        end
       end
     end
   end
@@ -532,6 +559,21 @@ return function(mod)
     ctx.game.stack:push(menu)
     runner:yield()
     return picked -- nil on cancel
+  end
+
+  local function pickFromCategories(ctx, title, categorized, opts)
+    local available = {}
+    for _, category in ipairs(FURNITURE_CATEGORIES) do
+      if categorized[category] and #categorized[category] > 0 then
+        available[#available + 1] = category
+      end
+    end
+    while true do
+      local category = pickFromList(ctx, title, available)
+      if not category then return nil end -- backed out entirely
+      local label = pickFromList(ctx, category, categorized[category], opts)
+      if label then return label end
+    end
   end
 
   local function musicChoicesFor(data)
@@ -564,6 +606,13 @@ return function(mod)
     end,
   })
 
+  mod.content.commands:register("secretBase:pickShow", {
+    fn = function(ctx)
+      local showChoice = showList.random
+      return showChoice
+    end,  
+  })
+
   mod.content.commands:register("secretBase:openPC", {
     foreground = true,
     fn = function(ctx) ctx.overworld:openPC() end,
@@ -572,13 +621,16 @@ return function(mod)
   mod.content.commands:register("secretBase:inactiveFurnitureList", {
     foreground = true,
     fn = function(ctx, title)
-      local labels = {}
-      for _, item in ipairs(FURNITURE) do
-        if isPurchased(item) and not isActive(item) then
-          labels[#labels + 1] = item.label
+      local categorized = {}
+      for _, category in ipairs(FURNITURE_CATEGORIES) do
+        categorized[category] = {}
+        for _, item in ipairs(FURNITURE[category]) do
+          if isPurchased(item) and not isActive(item) then
+            table.insert(categorized[category], item.label)
+          end
         end
       end
-      local label = pickFromList(ctx, title or "ADD FURNITURE", labels)
+      local label = pickFromCategories(ctx, title or "ADD FURNITURE", categorized)
       if not label then return "end" end -- CANCEL
       ctx.lastChoice = { label = label }
     end,
@@ -587,13 +639,16 @@ return function(mod)
   mod.content.commands:register("secretBase:activeFurnitureList", {
     foreground = true,
     fn = function(ctx, title)
-      local labels = {}
-      for _, item in ipairs(FURNITURE) do
-        if isActive(item) then
-          labels[#labels + 1] = item.label
+      local categorized = {}
+      for _, category in ipairs(FURNITURE_CATEGORIES) do
+        categorized[category] = {}
+        for _, item in ipairs(FURNITURE[category]) do
+          if isActive(item) then
+            table.insert(categorized[category], item.label)
+          end
         end
       end
-      local label = pickFromList(ctx, title or "SELECT FURNITURE", labels)
+      local label = pickFromCategories(ctx, title or "SELECT FURNITURE", categorized)
       if not label then return "end" end -- CANCEL
       ctx.lastChoice = { label = label }
     end,
@@ -665,16 +720,19 @@ return function(mod)
   mod.content.commands:register("secretBase:shopFurnitureList", {
     foreground = true,
     fn = function(ctx)
-      local itemWithCost = {}
-      for _, item in ipairs(FURNITURE) do
-        if not isPurchased(item) then
-          itemWithCost[#itemWithCost + 1] = {
-            label = item.label,
-            right = ("¥%d"):format(item.cost),
-          }
+      local categorized = {}
+      for _, category in ipairs(FURNITURE_CATEGORIES) do
+        categorized[category] = {}
+        for _, item in ipairs(FURNITURE[category]) do
+          if not isPurchased(item) then
+            table.insert(categorized[category], {
+              label = item.label,
+              right = ("¥%d"):format(item.cost),
+            })
+          end
         end
       end
-      local label = pickFromList(ctx, "FURNITURE SHOP", itemWithCost, {
+      local label = pickFromCategories(ctx, "FURNITURE SHOP", categorized, {
         dialogue = true,
         footer = "Take your time.",
         money = function() return ctx.save.money end,
