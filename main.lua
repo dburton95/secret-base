@@ -106,6 +106,8 @@ return function(mod)
 
   local FURNITURE_CATEGORIES = { "DECORATIONS", "FUNCTIONAL", "TRAINERS" }
 
+  -- current index 13
+
   local FURNITURE = {
     DECORATIONS = {
       {
@@ -161,6 +163,11 @@ return function(mod)
         sprite = "SPRITE_RECORD_PLAYER", movement = "STAY", range = "NONE",
         cost = 15000, footprint = footprintFor(1, 1),
       },
+      {
+        id = "RENO_MACHOP", label = "Reno. Machop", index = 13, x =10, y = 10,
+        sprite = "SPRITE_MONSTER", movement = "WALK", range = 2,
+        cost = 50000, footprint = footprintFor(1, 1),
+      },
     },
     TRAINERS = {
       {
@@ -172,18 +179,28 @@ return function(mod)
   }
 
   local restoreActiveFurniture
+  local applyTileset
 
   -- TV Lines
   -- --------
   local showList = {
-    "A strange blue\nPokemon is\vlooking for clues?",
-    "..........\n..........\012I hope Mom doesn't see this on the\vcable bill.",
+    "A strange blue\nPokemon is looking\vfor clues?",
+    "..........\v..........\012I hope Mom doesn't\nsee this on the\vcable bill.",
     "A man complains\nabout a 5 dollar\vshake.",
     "She could fit Jack\non that door...",
+    "I could've sworn\nhe said Luke...",
+    "Somehow he\ndisarmed a bomb\vwith a ballpoint\vpen and gum.",
+    "He insists the car\nis a time machine\012but only if you\ndrive crazy fast.",
+    "He should've got a\nbigger boat...",
+    "That aerodactyl is\na clever girl.",
+    "A man holds a blue\nand a red pill.",
+    "You miss 100% of\nthe shots you\vdon't take.\012...\012-Wayne Gretsky\012-Michael Scott",
+    "A polite painter\nassures you that\vthe tree should be\vthere.",
+    "A metal trash can\nis shouting.\012EXTERMINATE!\nEXTERMINATE!",
+    "A disembodied hand\ncrosses the room\vcarrying the mail.",
+    "Four Squirtles in\nmasks are eating\vpizza.",
   }
 
-  -- Builds a talk script that picks a random line from showList and
-  -- shows it -- adding more entries to showList is picked up automatically.
   local function buildTvTalk()
     local talk = {
       {"secretBase:pickShow"},
@@ -309,18 +326,128 @@ return function(mod)
         {"secretBase:swapLampStatus"},
       },
       ["TV"] = buildTvTalk(),
+      ["Reno. Machop"] = {
+        {"show_text", "The Machop yearns\nto renovate."},
+        {"ask", "Change the tileset?"},
+        {"jump_if_false", "end"},
+        {"choice", {"Cave", "Cemetery", "Forest", "House"}},
+        {"secretBase:changeTileset"},
+      },
     },
-    
+  
 
-    onEnter = function(game, ow) restoreActiveFurniture() end,
+    onEnter = function(game, ow) restoreActiveFurniture() applyTileset() end,
   })
 
+  -- Tilesets
+  ---------------------------
+  local TILESET_FLAG = "MOD_SECRET_BASE_TILESET"
+
+  local TILESET_BY_CHOICE = {
+    Cave = {
+      tileset = "CAVERN",
+      palette = "CAVE",
+      borderBlock = 25,
+      blocks = {
+        25, 29, 29, 29, 30, 85, 28, 29, 29, 29, 25,
+        26,  1,  1,  1,  1,  1,  1,  1,  1,  1, 24,
+        26,  1,  1,  1,  1,  1,  1,  1,  1,  1, 24,
+        26,  1,  1,  1,  1,  1,  1,  1,  1,  1, 24,
+        26,  1,  1,  1,  1,  1,  1,  1,  1,  1, 24,
+        26,  1,  1,  1,  1,  1,  1,  1,  1,  1, 24,
+        26,  1,  1,  1,  1,  1,  1,  1,  1,  1, 24,
+        26,  1,  1,  1,  1,  1,  1,  1,  1,  1, 24,
+        26,  1,  1,  1,  1,  1,  1,  1,  1,  1, 24,
+        26,  1,  1,  1,  1,  1,  1,  1,  1,  1, 24,
+        25, 21, 21, 21, 21, 21, 21, 21, 21, 21, 25,
+      },
+    },
+    Cemetery = {
+      tileset = "CEMETERY",
+      palette = "MEWMON",
+      borderBlock = 82,
+      blocks = {
+        82, 82, 82, 82, 82, 76, 82, 82, 82, 82, 82,
+        82, 54, 54, 54, 54, 54, 54, 54, 54, 54, 82,
+        82, 54, 54, 54, 54, 54, 54, 54, 54, 54, 82,
+        82, 54, 54, 54, 54, 54, 54, 54, 54, 54, 82,
+        82, 54, 54, 54, 54, 54, 54, 54, 54, 54, 82,
+        82, 54, 54, 54, 54, 54, 54, 54, 54, 54, 82,
+        82, 54, 54, 54, 54, 54, 54, 54, 54, 54, 82,
+        82, 54, 54, 54, 54, 54, 54, 54, 54, 54, 82,
+        82, 54, 54, 54, 54, 54, 54, 54, 54, 54, 82,
+        82, 54, 54, 54, 54, 54, 54, 54, 54, 54, 82,
+        82, 82, 82, 82, 82, 82, 82, 82, 82, 82, 82,
+      },
+    },
+    Forest = {
+      tileset = "GYM",
+      palette = "CELADON",
+      borderBlock = 52,
+      blocks = {
+        52, 52, 52, 52, 52, 58, 52, 52, 52, 52, 52,
+        52, 51, 51, 51, 51, 51, 51, 51, 51, 51, 52,
+        52, 51, 51, 51, 51, 51, 51, 51, 51, 51, 52,
+        52, 51, 51, 51, 51, 51, 51, 51, 51, 51, 52,
+        52, 51, 51, 51, 51, 51, 51, 51, 51, 51, 52,
+        52, 51, 51, 51, 51, 51, 51, 51, 51, 51, 52,
+        52, 51, 51, 51, 51, 51, 51, 51, 51, 51, 52,
+        52, 51, 51, 51, 51, 51, 51, 51, 51, 51, 52,
+        52, 51, 51, 51, 51, 51, 51, 51, 51, 51, 52,
+        52, 51, 51, 51, 51, 51, 51, 51, 51, 51, 52,
+        52, 52, 52, 52, 52, 52, 52, 52, 52, 52, 52,
+      },
+    },
+    House = {
+      tileset = "CEMETERY",
+      palette = "GRAYMON",
+      borderBlock = 1,
+      blocks = {
+        2,  2,  2,  2,  2,  6,  2,  2,  2,  2,  2,
+        2, 14, 14, 14, 14, 14, 14, 14, 14, 14,  2,
+        2, 14, 14, 14, 14, 14, 14, 14, 14, 14,  2,
+        2, 14, 14, 14, 14, 14, 14, 14, 14, 14,  2,
+        2, 14, 14, 14, 14, 14, 14, 14, 14, 14,  2,
+        2, 14, 14, 14, 14, 14, 14, 14, 14, 14,  2,
+        2, 14, 14, 14, 14, 14, 14, 14, 14, 14,  2,
+        2, 14, 14, 14, 14, 14, 14, 14, 14, 14,  2,
+        2, 14, 14, 14, 14, 14, 14, 14, 14, 14,  2,
+        2, 14, 14, 14, 14, 14, 14, 14, 14, 14,  2,
+        2,  2,  2,  2,  2,  2,  2,  2,  2,  2,  2,
+      },      
+    },
+  }
+
+
+
+  local function applyTilesetChoice(choice)
+    local tileset = choice and TILESET_BY_CHOICE[choice]
+    if not tileset then return end
+    local game = mod.game
+    local def = game and game.data and game.data.maps
+      and game.data.maps["SECRET_BASE"]
+    if not def then return end
+    def.tileset = tileset.tileset
+    def.palette = tileset.palette
+    def.borderBlock = tileset.borderBlock
+    def.blocks = tileset.blocks
+    mod.world:invalidateMap("SECRET_BASE")
+  end
+
+  applyTileset = function()
+    local choice = mod.world:getFlag(TILESET_FLAG)
+    if choice then applyTilesetChoice(choice) end
+  end
 
   -- Art Credits
   -- -------------
   local creditsList = {
+    {item = "This mod made by:", artist = "Team Kris"},
     {item = "Miku", artist = "MoonLightLass"},
     {item = "Music Player", artist = "7dollar24cent"},
+    {item = "TV Lines", artist = "Elvie"},
+    {item = "TV Lines", artist = "Sanura"},
+    {item = "TV Lines", artist = "ZephyrraDawn"},
   }
 
 
@@ -348,7 +475,7 @@ return function(mod)
       end
     end
   end
-  
+
   -- Gacha Ball
   -- -------------
   local GACHA_TIERS = {
@@ -606,6 +733,8 @@ return function(mod)
   local MOVE_Y_LABELS = {}
   for y = 2, 19 do MOVE_Y_LABELS[#MOVE_Y_LABELS + 1] = tostring(y) end
 
+  -- Talk Script Helper Functions
+  ---------------------------------
   mod.content.commands:register("secretBase:swapLampStatus", {
     fn = function(ctx)
       local lamp = FURNITURE_BY_LABEL["Lamp"]
@@ -700,6 +829,20 @@ return function(mod)
         spawnFurniture(item)
       end
     end,
+  })
+
+  mod.content.commands:register("secretBase:changeTileset", {
+    fn = function(ctx)
+      local choice = ctx.lastChoice and ctx.lastChoice.label
+      if not choice or not TILESET_BY_CHOICE[choice] then return end
+      mod.world:setFlag(TILESET_FLAG, choice)
+      applyTilesetChoice(choice)
+    end,
+  })
+
+
+  mod.content.commands:register("secretBase:forceSave", {
+    fn = function(ctx) ctx.game:writeSave() end,
   })
 
   mod.content.commands:register("secretBase:pickMoveItem", {
