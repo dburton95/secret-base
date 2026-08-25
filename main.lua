@@ -90,7 +90,7 @@ return function(mod)
   local MIKU_FRONT = mod.assets:path("assets/mikuFront.png")
 
   mod.content.trainers:register("OPP_MIKU", {
-    id = "OPP_MIKU", name = "HATSUNE MIKU", baseMoney = 75, pic = MIKU_FRONT, trueColor = true,
+    id = "OPP_MIKU", name = "HATSUNE MIKU", baseMoney = 100, pic = MIKU_FRONT, trueColor = true,
     parties = {
       {{level = 10, species = "PIKACHU"}, {level = 10, species = "PIDGEY"}, {level = 10, species = "CHARMANDER"}, {level = 10, species = "LAPRAS"}, {level = 10, species = "JIGGLYPUFF"}, {level = 10, species = "FARFETCHD"}},
       {{level = 25, species = "PIKACHU"}, {level = 25, species = "PIDGEOTTO"}, {level = 25, species = "CHARMELEON"}, {level = 25, species = "LAPRAS"}, {level = 25, species = "JIGGLYPUFF"}, {level = 25, species = "FARFETCHD"}},
@@ -99,6 +99,7 @@ return function(mod)
     },
   })
 
+
   -- Anything bigger than one tile needs the footprint attribute
   -- use footprintFor(NUMBER-OF-TILES-IN-X-DIRECTION, NUMBER-OF-TILES-IN-Y-DIRECTION)
   -- to determine the footprint locations automatically.
@@ -106,17 +107,27 @@ return function(mod)
 
   local FURNITURE_CATEGORIES = { "DECORATIONS", "FUNCTIONAL", "TRAINERS" }
 
-  -- current index 13
+  -- current index 15
 
   local FURNITURE = {
     DECORATIONS = {
       {
-        id = "CHAIR_LEFT", label = "Chair-Left", index = 5, x = 10, y = 10,
+        id = "CHAIR_LEFT_1", label = "Chair-Left-1", index = 5, x = 10, y = 10,
         sprite = "SPRITE_CHAIR_LEFT", movement = "STAY", range = "NONE",
         cost = 250, footprint = footprintFor(1, 1),
       },
       {
-        id = "CHAIR_RIGHT", label = "Chair-Right", index = 4, x = 10, y = 10,
+        id = "CHAIR_LEFT_2", label = "Chair-Left-2", index = 14, x = 10, y = 10,
+        sprite = "SPRITE_CHAIR_LEFT", movement = "STAY", range = "NONE",
+        cost = 250, footprint = footprintFor(1, 1),
+      },     
+      {
+        id = "CHAIR_RIGHT_1", label = "Chair-Right-1", index = 4, x = 10, y = 10,
+        sprite = "SPRITE_CHAIR_RIGHT", movement = "STAY", range = "NONE",
+        cost = 250, footprint = footprintFor(1, 1),
+      },
+      {
+        id = "CHAIR_RIGHT_2", label = "Chair-Right-2", index = 15, x = 10, y = 10,
         sprite = "SPRITE_CHAIR_RIGHT", movement = "STAY", range = "NONE",
         cost = 250, footprint = footprintFor(1, 1),
       },
@@ -173,6 +184,11 @@ return function(mod)
       {
         id = "MIKU", label = "Miku", index = 6, x = 10, y = 10,
         sprite = "SPRITE_MIKU", movement = "WALK", range = 2,
+        cost = 25000, footprint = footprintFor(1, 1),
+      },
+      {
+        id = "OAK", label = "Prof. Oak", index = 16, x = 10, y =10,
+        sprite = "SPRITE_OAK", movement = "WALK", range = 2,
         cost = 25000, footprint = footprintFor(1, 1),
       },
     },
@@ -264,10 +280,16 @@ return function(mod)
       ["Square Table"] = {
         {"show_text", "It's a table."},
       },
-      ["Chair-Right"] = {
+      ["Chair-Right-1"] = {
         {"show_text", "It's a chair."},
       },
-      ["Chair-Left"] = {
+      ["Chair-Left-1"] = {
+        {"show_text", "It's a chair."},
+      },
+      ["Chair-Right-2"] = {
+        {"show_text", "It's a chair."},
+      },
+      ["Chair-Left-2"] = {
         {"show_text", "It's a chair."},
       },
       ["Miku"] = {
@@ -333,11 +355,37 @@ return function(mod)
         {"choice", {"Cave", "Cemetery", "Forest", "House"}},
         {"secretBase:changeTileset"},
       },
+      ["Prof. Oak"] = {
+        {"show_text", "How's your Pokedex\ncoming along?"},
+        {"choice", {"Rate Pokedex", "Battle"}},
+        {"secretBase:chooseOakOption"},
+        {"jump", "end"},
+
+        {"label", "Rate Pokedex"},
+        {"dex_rating"},
+        {"jump", "end"},
+
+        {"label", "Battle"},
+        {"secretBase:chooseOakBattle"},
+        {"jump", "end"},
+
+        {"label", "1"},
+        {"start_battle", "trainer", "OPP_PROF_OAK", 1},
+        {"jump", "end"},
+
+        {"label", "2"},
+        {"start_battle", "trainer", "OPP_PROF_OAK", 2},
+        {"jump", "end"},
+
+        {"label", "3"},
+        {"start_battle", "trainer", "OPP_PROF_OAK", 3},
+      },
     },
   
 
     onEnter = function(game, ow) restoreActiveFurniture() applyTileset() end,
   })
+
 
   -- Tilesets
   ---------------------------
@@ -438,6 +486,8 @@ return function(mod)
     local choice = mod.world:getFlag(TILESET_FLAG)
     if choice then applyTilesetChoice(choice) end
   end
+
+ 
 
   -- Art Credits
   -- -------------
@@ -559,6 +609,7 @@ return function(mod)
     local last = tiers[#tiers]
     return last.items[math.random(1, #last.items)], last.id
   end
+
 
   -- Record player
   -- -------------
@@ -735,6 +786,23 @@ return function(mod)
 
   -- Talk Script Helper Functions
   ---------------------------------
+
+  mod.content.commands:register("secretBase:chooseOakOption", {
+    foreground = true,
+    fn = function(ctx)
+      local choice = ctx.lastChoice and ctx.lastChoice.label
+      if choice == "Rate Pokedex" then return "Rate Pokedex" end
+      if choice == "Battle" then return "Battle" end
+      return "end" -- Cancel (or menu cancel)
+    end,
+  })
+
+  mod.content.commands:register("secretBase:chooseOakBattle", {
+    fn = function(ctx)
+      return tostring(math.random(1, 3))
+    end,
+  })
+
   mod.content.commands:register("secretBase:swapLampStatus", {
     fn = function(ctx)
       local lamp = FURNITURE_BY_LABEL["Lamp"]
