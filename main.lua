@@ -90,7 +90,7 @@ return function(mod)
   local MIKU_FRONT = mod.assets:path("assets/mikuFront.png")
 
   mod.content.trainers:register("OPP_MIKU", {
-    id = "OPP_MIKU", name = "HATSUNE MIKU", baseMoney = 100, pic = MIKU_FRONT, trueColor = true,
+    id = "OPP_MIKU", name = "HATSUNE MIKU", baseMoney = 99, pic = MIKU_FRONT, trueColor = true,
     parties = {
       {{level = 10, species = "PIKACHU"}, {level = 10, species = "PIDGEY"}, {level = 10, species = "CHARMANDER"}, {level = 10, species = "LAPRAS"}, {level = 10, species = "JIGGLYPUFF"}, {level = 10, species = "FARFETCHD"}},
       {{level = 25, species = "PIKACHU"}, {level = 25, species = "PIDGEOTTO"}, {level = 25, species = "CHARMELEON"}, {level = 25, species = "LAPRAS"}, {level = 25, species = "JIGGLYPUFF"}, {level = 25, species = "FARFETCHD"}},
@@ -112,22 +112,22 @@ return function(mod)
   local FURNITURE = {
     DECORATIONS = {
       {
-        id = "CHAIR_LEFT_1", label = "Chair-Left-1", index = 5, x = 10, y = 10,
+        id = "CHAIR_LEFT_1", label = "Chair L. 1", index = 5, x = 10, y = 10,
         sprite = "SPRITE_CHAIR_LEFT", movement = "STAY", range = "NONE",
         cost = 250, footprint = footprintFor(1, 1),
       },
       {
-        id = "CHAIR_LEFT_2", label = "Chair-Left-2", index = 14, x = 10, y = 10,
+        id = "CHAIR_LEFT_2", label = "Chair L. 2", index = 14, x = 10, y = 10,
         sprite = "SPRITE_CHAIR_LEFT", movement = "STAY", range = "NONE",
         cost = 250, footprint = footprintFor(1, 1),
       },     
       {
-        id = "CHAIR_RIGHT_1", label = "Chair-Right-1", index = 4, x = 10, y = 10,
+        id = "CHAIR_RIGHT_1", label = "Chair R. 1", index = 4, x = 10, y = 10,
         sprite = "SPRITE_CHAIR_RIGHT", movement = "STAY", range = "NONE",
         cost = 250, footprint = footprintFor(1, 1),
       },
       {
-        id = "CHAIR_RIGHT_2", label = "Chair-Right-2", index = 15, x = 10, y = 10,
+        id = "CHAIR_RIGHT_2", label = "Chair R. 2", index = 15, x = 10, y = 10,
         sprite = "SPRITE_CHAIR_RIGHT", movement = "STAY", range = "NONE",
         cost = 250, footprint = footprintFor(1, 1),
       },
@@ -236,7 +236,7 @@ return function(mod)
     talk = {
       ["CATALOGUE"] = {
   	    {"show_text", "MYSTIC FURNITURE\nCATALOGUE:"},
-	      {"choice", {"Add Furniture", "Move Furniture", "Remove Furniture", "Buy Furniture", "Cancel"}},
+	      {"choice", {"Add Furniture", "Move Furniture", "Remove Furniture", "Buy Furniture", "Call Oak's Aid", "Cancel"}},
       	{"secretBase:catalogueChoice"},
       	{"jump", "end"},
 
@@ -266,6 +266,32 @@ return function(mod)
         {"label", "cant_afford"},
         {"show_text", "You don't have\nenough money."},
         {"jump", "purchase"},
+
+        {"label", "call_aid"},
+        {"show_text", "..................\n..................\012Hey, how's it\ngoing?\012Did you need\nsomething?"},
+        {"choice", {"New Shovel", "New Watch"}},
+        {"secretBase:oaksAidChoice"},
+        {"jump","end"},
+
+        {"label", "shovel"},
+        {"check_item", "MYS_SHOVEL"},
+        {"jump_if_true", "has_shovel"},
+        {"give_item", "MYS_SHOVEL", 1, "Oh did you lose\nyour shovel?\012I'll mail it to\nyou."},
+        {"jump", "end"},
+
+        {"label", "has_shovel"},
+        {"show_text", "You already have a\nshovel..."},
+        {"jump", "end"},
+
+        {"label", "watch"},
+        {"check_item", "MYSTIC_WATCH"},
+        {"jump_if_true", "has_watch"},
+        {"give_item", "MYSTIC_WATCH", 1, "Dang you lost your\nwatch?\012I'll mail you a\nnew one."},
+        {"jump", "end"},
+
+        {"label", "has_watch"},
+        {"show_text", "You already have a\nwatch..."},
+
       },
       ["Bed"] = {
         {"ask", "Take a rest?"},
@@ -280,16 +306,16 @@ return function(mod)
       ["Square Table"] = {
         {"show_text", "It's a table."},
       },
-      ["Chair-Right-1"] = {
+      ["Chair R. 1"] = {
         {"show_text", "It's a chair."},
       },
-      ["Chair-Left-1"] = {
+      ["Chair L. 1"] = {
         {"show_text", "It's a chair."},
       },
-      ["Chair-Right-2"] = {
+      ["Chair R. 2"] = {
         {"show_text", "It's a chair."},
       },
-      ["Chair-Left-2"] = {
+      ["Chair L. 2"] = {
         {"show_text", "It's a chair."},
       },
       ["Miku"] = {
@@ -644,6 +670,7 @@ return function(mod)
   end
 
   local LAMP_ON_FLAG = "MOD_SECRET_BASE_LAMP_ON"
+  local PUSH_MODE_FLAG = "MOD_SECRET_BASE_PUSH_MODE"
 
   local function spriteFor(item)
     if item.id == "LAMP" and mod.world:getFlag(LAMP_ON_FLAG) then
@@ -750,6 +777,46 @@ return function(mod)
     runner:yield()
     return picked -- nil on cancel
   end
+  local DIR_DELTA = {
+    up = {0, -1}, down = {0, 1}, left = {-1, 0}, right = {1, 0},
+  }
+  
+  local function pushableItemAt(x, y)
+    for _, category in ipairs(FURNITURE_CATEGORIES) do
+      for _, item in ipairs(FURNITURE[category]) do
+        if item.movement == "STAY" and not item.noPush
+            and #(item.footprint or {}) == 0 and isActive(item) then
+          local ix, iy = positionFor(item)
+          if ix == x and iy == y then return item end
+        end
+      end
+    end
+  end
+
+  mod.hooks:wrap("movement.collision", function(next, allowed, ctx)
+    if allowed or ctx.reason ~= "entity" then return next(allowed, ctx) end
+    if not mod.world:getFlag(PUSH_MODE_FLAG) then return next(allowed, ctx) end
+
+    local ow = mod.world:overworld()
+    if not ow or ctx.mover ~= ow.player or not ow.map
+        or ow.map.id ~= "SECRET_BASE" then
+      return next(allowed, ctx)
+    end
+
+    local item = pushableItemAt(ctx.toX, ctx.toY)
+    local entry = item and activeNpc[item.id]
+    local handle = entry and mod.world:npc("SECRET_BASE", entry.npc)
+    if not handle or handle:isMoving() or not handle:canStep(ctx.dir) then
+      return next(allowed, ctx) -- something's in the way; stays blocked
+    end
+
+    handle:stepNow(ctx.dir) -- animated slide, same timing as the player's step
+    local d = DIR_DELTA[ctx.dir]
+    mod.world:setFlag(positionXFlagFor(item), ctx.toX + d[1])
+    mod.world:setFlag(positionYFlagFor(item), ctx.toY + d[2])
+
+    return next(true, ctx) -- let the player step into the vacated tile
+  end)
 
   local function pickFromCategories(ctx, title, categorized, opts)
     local available = {}
@@ -786,6 +853,7 @@ return function(mod)
 
   -- Talk Script Helper Functions
   ---------------------------------
+
 
   mod.content.commands:register("secretBase:chooseOakOption", {
     foreground = true,
@@ -870,7 +938,18 @@ return function(mod)
       if choice == "Move Furniture" then return "move" end
       if choice == "Remove Furniture" then return "remove" end
       if choice == "Buy Furniture" then return "purchase" end
+      if choice == "Call Oak's Aid" then return "call_aid" end
       return "end" -- Cancel (or menu cancel)
+    end,
+  })
+
+  mod.content.commands:register("secretBase:oaksAidChoice", {
+    foreground = true,
+    fn = function(ctx)
+      local choice = ctx.lastChoice and ctx.lastChoice.label
+      if choice == "New Shovel" then return "shovel" end
+      if choice == "New Watch" then return "watch" end
+      return "end"
     end,
   })
 
@@ -1140,6 +1219,24 @@ return function(mod)
     end,
   })
 
+  -- Push-mode toggle item
+  -- ------------------------
+  mod.content.items:register("MYSTIC_WATCH", {
+    id = "MYSTIC_WATCH", name = "MYSTIC WATCH", price = 0,
+    tossable = false, effect = "MYS_WATCH_EFFECT",
+  })
+
+  mod.content.item_effects:register("MYS_WATCH_EFFECT", {
+    field = true, battle = false,
+    use = function(ctx)
+      local on = not mod.world:getFlag(PUSH_MODE_FLAG)
+      mod.world:setFlag(PUSH_MODE_FLAG, on)
+      return "kept", {on
+        and "You suddenly feel\nvery strong!\012Try pushing some\nfurniture."
+        or "You feel weak like\nsomeone that can't\vmove furniture."}
+    end,
+  })
+
   -- Give player shovel
   -- --------------------
   mod.content.maps:patch("MT_MOON_POKECENTER", {
@@ -1153,20 +1250,27 @@ return function(mod)
     }},
   })
 
+  local shovelGiverScript = {
+    {"face_player"},
+    {"check_item", "MYS_SHOVEL"},
+    {"jump_if_true", "has_shovel"},
+    {"give_item", "MYS_SHOVEL", 1, 
+      "There you are!\012Check out this\nweird shovel.\012You can have it!"},
+
+    {"label", "has_shovel"},
+    {"check_item", "MYSTIC_WATCH"},
+    {"jump_if_true", "has_watch"},
+    {"give_item", "MYSTIC_WATCH", 1,
+      "Oh, and take this\nwatch, too.\012It'll make you\nstrong!"},
+    {"jump", "end"},
+
+    {"label", "has_watch"},
+    {"show_text", "I have tons\nof these things.\012If you lose yours,\vcome talk\vto me again."},
+  }
+
   mod.content.map_scripts:register("MT_MOON_POKECENTER", {
     talk = {
-      TEXT_OAK_AIDE_SHOVEL = {
-	{"face_player"},
-	{"check_item", "MYS_SHOVEL"},
-	{"jump_if_true", "has_shovel"},
-
-	{"give_item", "MYS_SHOVEL", 1,
-	  "There you are!\vCheck out this\vweird shovel.\vYou can have it!"},
-	{"jump", "end"},
-
-	{"label", "has_shovel"},
-	{"show_text", "I have tons\nof these things.\012If you lose yours,\vcome talk\vto me again."},
-      },
+      TEXT_OAK_AIDE_SHOVEL = shovelGiverScript,
     },
   })
 end
