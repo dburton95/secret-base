@@ -27,6 +27,9 @@ return function(mod)
     return offsets
   end
 
+
+  --Custom Sprites
+  -----------------------
   mod.content.sprites:register("SPRITE_BED", {
     image = mod.assets:path("assets/bed.png"), frames = 1,
     frameWidth = 32, frameHeight = 32, trueColor = true,
@@ -82,6 +85,11 @@ return function(mod)
     frameWidth = 23, frameHeight = 24, trueColor = true,
   })
 
+  mod.content.sprites:register("SPRITE_WONDER_TRADE", {
+    image = mod.assets:path("assets/wonder_trade.png"), frames = 1,
+    trueColor = true,
+  })
+
   ---------------------------------------------------------------
   mod.content.sprites:register("SPRITE_INVISIBLE", {
     image = mod.assets:path("assets/invisible.png"), frames = 1,
@@ -107,7 +115,7 @@ return function(mod)
 
   local FURNITURE_CATEGORIES = { "DECORATIONS", "FUNCTIONAL", "TRAINERS" }
 
-  -- current index 15
+  -- current index 16
 
   local FURNITURE = {
     DECORATIONS = {
@@ -178,6 +186,11 @@ return function(mod)
         id = "RENO_MACHOP", label = "Reno. Machop", index = 13, x =10, y = 10,
         sprite = "SPRITE_MONSTER", movement = "WALK", range = 2,
         cost = 50000, footprint = footprintFor(1, 1),
+      },
+      {
+        id = "WONDER_TRADE", label = "Wonder Trader", index = 16, x =10, y = 10,
+        sprite = "SPRITE_WONDER_TRADE", movement = "STAY", range = "NONE",
+        cost = 10000, footprint = footprintFor(1, 1),
       },
     },
     TRAINERS = {
@@ -405,6 +418,12 @@ return function(mod)
 
         {"label", "3"},
         {"start_battle", "trainer", "OPP_PROF_OAK", 3},
+      },
+      ["Wonder Trader"] = {
+        {"ask", "Would you like to wonder trade?"},
+        {"jump_if_false", "end"},
+        {"secretBase:chooseTrade"},
+        {"secretBase:getWonderTrade"},
       },
     },
   
@@ -1163,6 +1182,88 @@ return function(mod)
 
       local itemId = rollGacha(GACHA_TIERS)
       require("src.script.Commands").give_item(ctx, itemId)
+    end,
+  })
+
+  -- Wonder Trade
+  -- ------------
+  local function randomSpecies(data)
+    local pool = {}
+    for id in pairs(data.pokemon) do pool[#pool + 1] = id end
+    return pool[math.random(#pool)]
+  end
+
+  mod.content.commands:register("secretBase:chooseTrade", {
+    foreground = true,
+    fn = function(ctx)
+      local data = ctx.game.data
+      local items = {}
+      for i, mon in ipairs(ctx.save.party) do
+        local def = data.pokemon[mon.species]
+        items[i] = {
+          label = mon.nickname or (def and def.name or mon.species),
+          right = ("Lv.%d"):format(mon.level),
+          mon = mon,
+        }
+      end
+      local runner = ctx.runner
+      local picked
+      local menu = mod.ui.ListMenu.new(ctx.game, "OFFER WHICH POKEMON?", items, {
+        wrap = true,
+        onChoose = function(item, self) picked = item.mon; self:close(); runner:resume() end,
+        onCancel = function() runner:resume() end,
+      })
+      ctx.game.stack:push(menu)
+      runner:yield()
+      if not picked then return "end" end 
+      ctx.wonderTradeMon = picked
+    end,
+  })
+
+  mod.content.commands:register("secretBase:getWonderTrade", {
+    foreground = true,
+    fn = function(ctx)
+      local sent = ctx.wonderTradeMon
+      ctx.wonderTradeMon = nil
+      if not sent then return "end" end 
+
+      local data = ctx.game.data
+      local species = randomSpecies(data)
+      local newMon = require("src.pokemon.Pokemon").new(data, species, sent.level)
+      newMon.traded = true 
+      newMon.ot = "WONDER"
+      newMon.otId = math.random(0, 65535)
+
+      local party = ctx.save.party
+      local slot
+      for i, mon in ipairs(party) do
+        if mon == sent then slot = i break end
+      end
+      if not slot then return "end" end 
+      table.remove(party, slot)
+      table.insert(party, newMon)
+
+      local dex = ctx.save.pokedex
+      if dex then
+        dex.seen[species] = true
+        dex.owned[species] = true
+      end
+
+      local runner = ctx.runner
+      require("src.ui.Screens").push(ctx.game, "TradeAnim", {
+        sent = sent, received = newMon,
+        enemyName = "WONDER",
+        playerOt = ctx.save.player.name,
+        playerOtId = sent.otId or ctx.save.player.id,
+        enemyOtId = newMon.otId,
+        onDone = function() runner:resume() end,
+      })
+      runner:yield()
+
+      local Commands = require("src.script.Commands")
+      Commands.text_sound(ctx, "Get_Key_Item")
+      Commands.show_text(ctx, ("Someone sent you\na %s!"):format(
+        data.pokemon[species] and data.pokemon[species].name or species))
     end,
   })
 
