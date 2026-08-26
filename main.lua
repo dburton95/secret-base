@@ -1201,12 +1201,12 @@ return function(mod)
       end
 
       if ow.map.id == "SECRET_BASE" then
-        local lastPC = ctx.save.lastHeal
-        if not lastPC then
+        local lastOutdoor = ctx.save.lastOutdoor
+        if not lastOutdoor then
           mod.world:warpTo("REDS_HOUSE_2F", 3, 6, "down",
             {arrive = "teleport"})
         else
-          mod.world:warpTo(lastPC.map, lastPC.x, lastPC.y, "down",
+          mod.world:warpTo(lastOutdoor.id, lastOutdoor.x, lastOutdoor.y, "down",
             {arrive = "teleport"})
         end
       else
@@ -1219,7 +1219,7 @@ return function(mod)
     end,
   })
 
-  -- Push-mode toggle item
+  -- Mystic Watch item system
   -- ------------------------
   mod.content.items:register("MYSTIC_WATCH", {
     id = "MYSTIC_WATCH", name = "MYSTIC WATCH", price = 0,
