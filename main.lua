@@ -767,8 +767,12 @@ return function(mod)
   restoreActiveFurniture = function()
     for _, category in ipairs(FURNITURE_CATEGORIES) do
       for _, item in ipairs(FURNITURE[category]) do
-        if isActive(item) and not activeNpc[item.id] then
-          spawnFurniture(item)
+        if isActive(item) then
+          if activeNpc[item.id] then
+            relocateFurniture(item, positionFor(item))
+          else
+            spawnFurniture(item)
+          end
         end
       end
     end
@@ -1302,13 +1306,20 @@ return function(mod)
       end
 
       if ow.map.id == "SECRET_BASE" then
+        local watchOn = mod.world:getFlag(PUSH_MODE_FLAG)
         local lastOutdoor = ctx.save.lastOutdoor
         if not lastOutdoor then
           mod.world:warpTo("REDS_HOUSE_2F", 3, 6, "down",
             {arrive = "teleport"})
+          if watchOn then
+            mod.world:setFlag(PUSH_MODE_FLAG, false)
+          end
         else
           mod.world:warpTo(lastOutdoor.id, lastOutdoor.x, lastOutdoor.y, "down",
             {arrive = "teleport"})
+          if watchOn then
+            mod.world:setFlag(PUSH_MODE_FLAG, false)
+          end
         end
       else
         mod.world:warpTo("SECRET_BASE", 10, 1, "down",
