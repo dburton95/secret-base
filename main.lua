@@ -90,6 +90,24 @@ return function(mod)
     trueColor = true,
   })
 
+  mod.content.sprites:register("SPRITE_TUB", {
+    image = mod.assets:path("assets/tub.png"), frames = 1,
+    frameWidth = 32, frameHeight = 16, trueColor = true,
+    anchorX = TOPLEFT_ANCHOR_X, anchorY = TOPLEFT_ANCHOR_Y,
+  })
+
+  mod.content.sprites:register("SPRITE_COUCH", {
+    image = mod.assets:path("assets/couch.png"), frames = 1,
+    frameWidth = 31, frameHeight = 21, trueColor = true,
+    anchorX = TOPLEFT_ANCHOR_X, anchorY = TOPLEFT_ANCHOR_Y,
+  })
+
+  mod.content.sprites:register("SPRITE_FRIDGE", {
+    image = mod.assets:path("assets/fridge.png"), frames = 1,
+    frameWidth = 16, frameHeight = 32, trueColor = true,
+    anchorX = TOPLEFT_ANCHOR_X, anchorY = 32,
+  })
+
   ---------------------------------------------------------------
   mod.content.sprites:register("SPRITE_INVISIBLE", {
     image = mod.assets:path("assets/invisible.png"), frames = 1,
@@ -115,7 +133,7 @@ return function(mod)
 
   local FURNITURE_CATEGORIES = { "DECORATIONS", "FUNCTIONAL", "TRAINERS" }
 
-  -- current index 16
+  -- current index 19
 
   local FURNITURE = {
     DECORATIONS = {
@@ -140,6 +158,11 @@ return function(mod)
         cost = 250, footprint = footprintFor(1, 1),
       },
       {
+        id = "COUCH", label = "Couch", index = 17, x = 10, y = 10,
+        sprite = "SPRITE_COUCH", movement = "STAY", range = "NONE",
+        cost = 500, footprint = footprintFor(2, 1),
+      },
+      {
         id = "LAMP", label = "Lamp", index = 11, x = 10, y = 10,
         sprite = "SPRITE_LAMP_OFF", movement = "STAY", range = "NONE",
         cost = 250, footprint = footprintFor(1, 1),
@@ -148,6 +171,11 @@ return function(mod)
         id = "TABLE_SQUARE", label = "Square Table", index = 3, x = 10, y =10,
         sprite = "SPRITE_TABLE_SQUARE", movement = "STAY", range = "NONE",
         cost = 500, footprint = footprintFor(2, 2),
+      },
+      {
+        id = "TUB", label = "Bath Tub", index = 18, x = 10, y = 10,
+        sprite = "SPRITE_TUB", movement = "STAY", range = "NONE",
+        cost = 500, footprint = footprintFor(2, 1),
       },
       {
         id = "TV", label = "TV", index = 12, x = 10, y = 10,
@@ -166,6 +194,11 @@ return function(mod)
         id = "CREDITS", label = "Credits", index = 10, x = 19, y = 2,
         sprite = "SPRITE_CLIPBOARD", movement = "STAY", range = "NONE",
         free = true, default = true, footprint = footprintFor(1, 1),
+      },
+      {
+        id = "FRIDGE", label = "Fridge", index = 19, x = 10, y = 10,
+        sprite = "SPRITE_FRIDGE", movement = "STAY", range = "NONE",
+        cost = 2000, footprint = footprintFor(1, 1),
       },
       {
         id = "GACHA_BALL", label = "Gacha Ball", index = 8, x = 10, y = 10,
@@ -209,6 +242,7 @@ return function(mod)
 
   local restoreActiveFurniture
   local applyTileset
+  local watchOff
 
   -- TV Lines
   -- --------
@@ -223,7 +257,7 @@ return function(mod)
     "He should've got a\nbigger boat...",
     "That aerodactyl is\na clever girl.",
     "A man holds a blue\nand a red pill.",
-    "You miss 100% of\nthe shots you\vdon't take.\012...\012-Wayne Gretsky\012-Michael Scott",
+    "You miss 100\npercent of the\vshots you don't\vtake.\012...\012-Wayne Gretsky\012-Michael Scott",
     "A polite painter\nassures you that\vthe tree should be\vthere.",
     "A metal trash can\nis shouting.\012EXTERMINATE!\nEXTERMINATE!",
     "A disembodied hand\ncrosses the room\vcarrying the mail.",
@@ -425,10 +459,21 @@ return function(mod)
         {"secretBase:chooseTrade"},
         {"secretBase:getWonderTrade"},
       },
+      ["Couch"] = {
+        {"show_text", "It's a couch.\vLooks comfy."},
+      },
+      ["Bath Tub"] = {
+        {"show_text", "I really should\ndrain this water."},
+      },
+      ["Fridge"] = {
+        {"ask", "Take a water?"},
+        {"jump_if_false", "end"},
+        {"give_item", "FRESH_WATER", 1}
+      },
     },
   
 
-    onEnter = function(game, ow) restoreActiveFurniture() applyTileset() end,
+    onEnter = function(game, ow) restoreActiveFurniture() applyTileset() watchOff() end,
   })
 
 
@@ -638,7 +683,7 @@ return function(mod)
       "MASTER_BALL",
       }
     },
-  }
+  }    
 
   local function rollGacha(tiers)
     local total = 0
@@ -776,6 +821,10 @@ return function(mod)
         end
       end
     end
+  end
+
+  watchOff = function()
+    mod.world:setFlag(PUSH_MODE_FLAG, nil)
   end
 
   -- Relocation System
@@ -1189,6 +1238,8 @@ return function(mod)
     end,
   })
 
+
+
   -- Wonder Trade
   -- ------------
   local function randomSpecies(data)
@@ -1306,20 +1357,13 @@ return function(mod)
       end
 
       if ow.map.id == "SECRET_BASE" then
-        local watchOn = mod.world:getFlag(PUSH_MODE_FLAG)
         local lastOutdoor = ctx.save.lastOutdoor
         if not lastOutdoor then
           mod.world:warpTo("REDS_HOUSE_2F", 3, 6, "down",
             {arrive = "teleport"})
-          if watchOn then
-            mod.world:setFlag(PUSH_MODE_FLAG, false)
-          end
         else
           mod.world:warpTo(lastOutdoor.id, lastOutdoor.x, lastOutdoor.y, "down",
             {arrive = "teleport"})
-          if watchOn then
-            mod.world:setFlag(PUSH_MODE_FLAG, false)
-          end
         end
       else
         mod.world:warpTo("SECRET_BASE", 10, 1, "down",
