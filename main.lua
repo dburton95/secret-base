@@ -466,6 +466,12 @@ return function(mod)
         {"show_text", "I really should\ndrain this water."},
       },
       ["Fridge"] = {
+        {"check_flag", "EVENT_GAVE_GUARDS_DRINK"},
+        {"jump_if_true", "waterUnlocked"},
+        {"show_text", "The water delivery\nman is delayed\vdue to a job in\vSaffron City..."},
+        {"jump", "end"},
+
+        {"label", "waterUnlocked"},
         {"ask", "Take a water?"},
         {"jump_if_false", "end"},
         {"give_item", "FRESH_WATER", 1}
@@ -1018,7 +1024,7 @@ return function(mod)
   mod.content.commands:register("secretBase:oaksAidChoice", {
     foreground = true,
     fn = function(ctx)
-      local choice = ctx.lastChoice and ctx.lastChoice.label
+      local choice = ctx.lastChoice and ctx.lastChoice.labeladdFurn
       if choice == "New Shovel" then return "shovel" end
       if choice == "New Watch" then return "watch" end
       return "end"
