@@ -198,7 +198,7 @@ return function(mod)
       {
         id = "FRIDGE", label = "Fridge", index = 19, x = 10, y = 10,
         sprite = "SPRITE_FRIDGE", movement = "STAY", range = "NONE",
-        cost = 2000, footprint = footprintFor(1, 1),
+        cost = 8000, footprint = footprintFor(1, 1),
       },
       {
         id = "GACHA_BALL", label = "Gacha Ball", index = 8, x = 10, y = 10,
